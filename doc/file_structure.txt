@@ -1,0 +1,22 @@
+The geometry file used by this program should look like this:
+
+5 0
+1 -50.0 -50.0 -50.0 50.0
+1 50.0 -50.0 50.0 50.0
+2 -50.0 -50.0 50.0 -50.0
+2 50.0 -50.0 50.0 50.0
+4 0.0 -50.0 0.0 50.0
+
+The first number indicates how many lines are there in the file itself, to help allocate enough memory for the lines.
+The second number indicated how many free-hand lines are there.
+Then it's followed by lines which are specified as such:
+1 -50.0 -50.0 -50.0 50.0 - the next four numbers are specific for non-free hand lines
+|	|      |    |    |
+|   |      |    |   Second Y coordinate (in milimeters)
+|   |      |   Second X coordinate (in milimeters)
+|   |    First Y coordinate (in milimeters)
+|  First X coordinate (in milimeters)
+Type of line (1-thick, 2-thin, 3-cut, 4-dot-line, 5-free draw).
+
+But with free hand lines it looks like this:
+5 3 -50.0 -50.0 -
