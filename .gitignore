@@ -1,0 +1,9 @@
+*.dll
+*.exe
+executable
+*.config
+*.creator
+*.files
+*.includes
+bin/
+src/*.swp
