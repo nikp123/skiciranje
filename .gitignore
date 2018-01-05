@@ -5,5 +5,8 @@ executable
 *.creator
 *.files
 *.includes
+*.user
 bin/
 src/.*.swp
+src/*.swp
+
