@@ -6,4 +6,4 @@ executable
 *.files
 *.includes
 bin/
-src/*.swp
+src/.*.swp
