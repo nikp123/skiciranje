@@ -19,24 +19,29 @@ char *positionString, mouseButton = false, lineType = 0, lineStatus = 0;
 #define backButton 140
 #define fileButton 160
 
-struct line1 {
-    int type;
+typedef struct {
+    Uint32 type;
     double x[2];
     double y[2];
-};
+} line1;
 
-struct line2 {
-    int type, lenght;
+typedef struct {
+    Uint32 type;
+    Uint32 lenght;
     double *x;
     double *y;
-};
+} line2;
 
-struct line1 *normalLine;
-struct line2 *drawLine;
+line1 *normalLine;
+line2 *drawLine;
 
 void allocNewLine(int type, double posX, double posY) {
     numOfLines++;
-    struct line1 *new = realloc(normalLine, numOfLines*sizeof(struct line1));
+    line1 *new;
+
+    if(normalLine == NULL) new = malloc(2*sizeof(line1));
+    else new = realloc(normalLine, (numOfLines+1)*sizeof(line1));
+
     if(new == NULL) {
         SDL_Log("Uh oh! Something went terribly wrong! The program is going to crash, NOW!\n");
         exit(EXIT_FAILURE);
@@ -52,14 +57,92 @@ void allocNewLine(int type, double posX, double posY) {
     return;
 }
 
-void discardNewLine(void) {
-    numOfLines--;
-    lineStatus = 0;
-    struct line1 *new = realloc(normalLine, numOfLines*sizeof(struct line1));
+void allocNewDraw(int type, double posX, double posY) {
+    line2 *new;
+
+    numOfDraws++;
+
+    if(drawLine != NULL) new = realloc(drawLine, (numOfDraws+1)*sizeof(line2));
+    else new = malloc(sizeof(line2)*2);
+
     if(new == NULL) {
         SDL_Log("Uh oh! Something went terribly wrong! The program is going to crash, NOW!\n");
         exit(EXIT_FAILURE);
     }
+
+    drawLine = new;
+    drawLine[numOfDraws-1].lenght = 1;
+    drawLine[numOfDraws-1].x = (double*)malloc(101*sizeof(double));
+    drawLine[numOfDraws-1].y = (double*)malloc(101*sizeof(double));
+    if(drawLine[numOfDraws-1].x == NULL||drawLine[numOfDraws-1].y == NULL) {
+        SDL_Log("Memory error!\n");
+        exit(EXIT_FAILURE);
+    }
+    drawLine[numOfDraws-1].x[0] = posX;
+    drawLine[numOfDraws-1].y[0] = posY;
+    drawLine[numOfDraws-1].type = type;
+
+    lineStatus = 2;
+    return;
+}
+
+void addPointToNewDraw(double posX, double posY) {
+    // increment the pointer
+    drawLine[numOfDraws-1].lenght++;
+
+    // grow by every 100th
+    if(((int)drawLine[numOfDraws-1].lenght/100) - ((int)(drawLine[numOfDraws-1].lenght-1)/100)) {
+        // grow by 100 points
+        double *new1, *new2,
+                *old1 = drawLine[numOfDraws-1].x,
+                *old2 = drawLine[numOfDraws-1].y;
+        new1 = realloc(old1, (drawLine[numOfDraws-1].lenght+101)*sizeof(double));
+        new2 = realloc(old2, (drawLine[numOfDraws-1].lenght+101)*sizeof(double));
+        if(new1 == NULL||new2 == NULL) {
+            SDL_Log("Memory error!\n");
+            exit(EXIT_FAILURE);
+        }
+        drawLine[numOfDraws-1].x = new1;
+        drawLine[numOfDraws-1].y = new2;
+    }
+
+    int potato = drawLine[numOfDraws-1].lenght-1;
+
+    // apply the new points
+    drawLine[numOfDraws-1].x[potato] = posX;
+    drawLine[numOfDraws-1].y[potato] = posY;
+    return;
+}
+
+void finishNewDraw(void) {
+    // reallocate to save on memory
+    double *new = realloc(drawLine[numOfDraws-1].x, (drawLine[numOfDraws-1].lenght+1)*sizeof(double));
+    drawLine[numOfDraws-1].x = new;
+    new = realloc(drawLine[numOfDraws-1].y, (drawLine[numOfDraws-1].lenght+1)*sizeof(double));
+    drawLine[numOfDraws-1].y = new;
+
+    // check if something went wrong
+    if(drawLine[numOfDraws-1].x==NULL||drawLine[numOfDraws-1].y==NULL) {
+        SDL_Log("Memory error!\n");
+        exit(EXIT_FAILURE);
+    }
+
+    // reset line status
+    lineStatus = 0;
+    return;
+}
+
+void discardNewLine(void) {
+    if(lineStatus!=1) return;
+    numOfLines--;
+    lineStatus = 0;
+    line1 *new = realloc(normalLine, (numOfLines+1)*sizeof(line1));
+    if(new == NULL) {
+        SDL_Log("Uh oh! Something went terribly wrong! The program is going to crash, NOW!\n");
+        exit(EXIT_FAILURE);
+    }
+
+    normalLine = new;
     return;
 }
 
@@ -70,6 +153,9 @@ void deleteAllLines(void) {
         free(drawLine[i].y);
     }
     free(drawLine);
+
+    drawLine = NULL;
+    normalLine = NULL;
 
     lineStatus = 0;
     numOfLines ^= numOfLines;
@@ -88,9 +174,11 @@ int loadEditorFile(char *filename, int level) {
         return 1;
     }
 
+    printf("%ld\n", sizeof(line2));
+
     // allocating the whole thing
-    normalLine = malloc(numOfLines*sizeof(struct line1));
-    drawLine = malloc(numOfDraws*sizeof(struct line2));
+    normalLine = malloc((numOfLines+1)*sizeof(line1));
+    drawLine = malloc((numOfDraws+1)*sizeof(line2));
     if(normalLine==NULL||drawLine==NULL) {
         SDL_Log("Memory error!\n");
         return 1;
@@ -98,6 +186,10 @@ int loadEditorFile(char *filename, int level) {
 
     // allocating our string
     char *tempString = malloc(1024);
+    if(tempString == NULL) {
+        SDL_Log("Memory error!\n");
+        return 1;
+    }
 
     // reading and importing the whole thing
     int doneLines = 0, doneDraws = 0;
@@ -106,19 +198,34 @@ int loadEditorFile(char *filename, int level) {
             sscanf(tempString, "%d %lf %lf %lf %lf", &normalLine[doneLines].type, &normalLine[doneLines].x[0],
                     &normalLine[doneLines].y[0], &normalLine[doneLines].x[1], &normalLine[doneLines].y[1]);
 			doneLines++;
-		} else break;
-        // TODO DRAWING LINES
-        /**
-        if(doneDraws != numOfDraws){
-            doneLines++;
-            sscanf(tempString, "%d %f %f %f %f", normalLine[i].type, normalLine[i].x[0], normalLine[i].y[0], normalLine[i].x[1], normalLine[i].y[1]);
-        }**/
+        } else if(doneDraws < numOfDraws){
+            sscanf(tempString, "%d %d\n", &drawLine[doneDraws].type, &drawLine[doneDraws].lenght);
+            drawLine[doneDraws].x = malloc(drawLine[doneDraws].lenght*sizeof(double));
+            drawLine[doneDraws].y = malloc(drawLine[doneDraws].lenght*sizeof(double));
+            if(drawLine[doneDraws].x==NULL||drawLine[doneDraws].y==NULL) {
+                SDL_Log("Memory allocation error!\n");
+                exit(EXIT_FAILURE);
+            }
+            for(int i = 0; i < drawLine[doneDraws].lenght; i++)
+                fscanf(file, "%lf %lf\n", &drawLine[doneDraws].x[i], &drawLine[doneDraws].y[i]);
+            doneDraws++;
+        }
     }
 
     free(tempString);
     fclose(file);
     return 0;
 }
+
+void drawPosition(void) {
+    if(positionTexture != NULL) SDL_DestroyTexture(positionTexture);
+    sprintf(positionString, "%sx=%.2f y=%.2f, %s%.2f\\0", textLine[11], x, y, textLine[12], zoom);
+    positionSurface = TTF_RenderUTF8_Blended(detailFont, positionString, translate_color(DETAIL_FONT_COLOR));
+    positionTexture = SDL_CreateTextureFromSurface(render, positionSurface);
+    SDL_FreeSurface(positionSurface);
+    return;
+}
+
 
 int initEditor(int level) {
     // special in the sense it needs more bloody code
@@ -177,19 +284,19 @@ void drawNormalLine(int type, int x1, int y1, int x2, int y2, Uint32 color) {
 
     // draw line
     switch(type) {
-        case 2:
-            if(abs(x1-x2) > abs(y1-y2)){
-            	SDL_RenderDrawLine(render, x1, y1-1, x2, y2-1);
-            	SDL_RenderDrawLine(render, x1, y1, x2, y2);
-            	SDL_RenderDrawLine(render, x1, y1+1, x2, y2+1);
-            } else if(abs(x1-x2) < abs(y1-y2)){
-            	SDL_RenderDrawLine(render, x1-1, y1, x2-1, y2);
-            	SDL_RenderDrawLine(render, x1, y1, x2, y2);
-            	SDL_RenderDrawLine(render, x1+1, y1, x2+1, y2);
-            }
-            break;
         case 1:
             SDL_RenderDrawLine(render, x1, y1, x2, y2);
+            break;
+        case 2:
+            if(abs(x1-x2) > abs(y1-y2)){
+                SDL_RenderDrawLine(render, x1, y1-1, x2, y2-1);
+                SDL_RenderDrawLine(render, x1, y1, x2, y2);
+                SDL_RenderDrawLine(render, x1, y1+1, x2, y2+1);
+            } else if(abs(x1-x2) < abs(y1-y2)){
+                SDL_RenderDrawLine(render, x1-1, y1, x2-1, y2);
+                SDL_RenderDrawLine(render, x1, y1, x2, y2);
+                SDL_RenderDrawLine(render, x1+1, y1, x2+1, y2);
+            }
             break;
         default:
             SDL_RenderDrawLine(render, x1, y1, x2, y2);
@@ -208,8 +315,8 @@ void cleanEditor() {
 	// delete our stuff
 	free(positionString);
 
-	free(normalLine);		// coorespoding numOfLines
-	//free(drawLine);		// coorespoding numOfDraws
+    // wipe everything
+    deleteAllLines();
 
 	// reinitilize the old stuff
 	win = SDL_CreateWindow(WINDOW_TITLE, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_FLAGS);
@@ -223,15 +330,6 @@ void cleanEditor() {
 		exit(EXIT_FAILURE);
 	}
 
-    return;
-}
-
-void drawPosition(void) {
-    if(positionTexture != NULL) SDL_DestroyTexture(positionTexture);
-    sprintf(positionString, "%sx=%.2f y=%.2f, %s%.2f\0", textLine[11], x, y, textLine[12], zoom);
-    positionSurface = TTF_RenderUTF8_Blended(detailFont, positionString, translate_color(DETAIL_FONT_COLOR));
-    positionTexture = SDL_CreateTextureFromSurface(render, positionSurface);
-    SDL_FreeSurface(positionSurface);
     return;
 }
 
@@ -294,7 +392,8 @@ int editorInput(void) {
                 } else if(!mouseButton&&lineStatus==1) {
                     normalLine[numOfLines-1].x[1] = (mouseCorX - tempVarX/2 - x/zoom)*zoom;
                     normalLine[numOfLines-1].y[1] = (mouseCorY - tempVarY/2 - y/zoom)*zoom;
-                }
+                } else if(mouseButton&&lineStatus==2)
+                    addPointToNewDraw((mouseCorX - tempVarX/2 - x/zoom)*zoom, (mouseCorY - tempVarY/2 - y/zoom)*zoom);
 
                 SDL_FlushEvent(SDL_MOUSEMOTION);
                 break;
@@ -323,6 +422,11 @@ int editorInput(void) {
                                  (mouseCorX - tempVarX/2 - x/zoom)*zoom,
                                  (mouseCorY - tempVarY/2 - y/zoom)*zoom);
                     mouseButton = true;
+                }else if(lineType==5){
+                    allocNewDraw(lineType,
+                                 (mouseCorX - tempVarX/2 - x/zoom)*zoom,
+                                 (mouseCorY - tempVarY/2 - y/zoom)*zoom);
+                    mouseButton = true;
                 }else if(lineStatus==1){
                     lineStatus = 0;
                     normalLine[numOfLines-1].x[1] = (mouseCorX - tempVarX/2 - x/zoom)*zoom;
@@ -335,6 +439,7 @@ int editorInput(void) {
 				mouseButton = false;
 				lastX = 0;
 				lastY = 0;
+                if(lineStatus==2) finishNewDraw();
 				break;
 			}
 			case SDL_MOUSEWHEEL:
@@ -366,10 +471,8 @@ int editorInput(void) {
 }
 
 void drawEditor() {
-
-
     // clear screen
-    SDL_SetRenderDrawColor(render, CLEAR_COLOR >> 24 % 8, CLEAR_COLOR >> 16 % 8, CLEAR_COLOR >> 8 % 8, CLEAR_COLOR % 8);
+    SDL_SetRenderDrawColor(render, (Uint8)CLEAR_COLOR >> 24 % 8, (Uint8)CLEAR_COLOR >> 16 % 8, (Uint8)CLEAR_COLOR >> 8 % 8, (Uint8)CLEAR_COLOR % 8);
     SDL_RenderClear(render);
 
     // get window size
@@ -423,8 +526,21 @@ void drawEditor() {
     }
 
 
-    // TODO: draw special lines
+    // draw special lines
+    for(int i = 0; i < numOfDraws; i++) {
+        int line_x[2], line_y[2];
 
+        for(int j = 0; j < drawLine[i].lenght-1; j++){
+            // calculate the lines
+            line_x[0] = tempVarX/2 + (int)((double)x/zoom + drawLine[i].x[j]/zoom);
+            line_x[1] = tempVarX/2 + (int)((double)x/zoom + drawLine[i].x[j+1]/zoom);
+            line_y[0] = tempVarY/2 + (int)((double)y/zoom + drawLine[i].y[j]/zoom);
+            line_y[1] = tempVarY/2 + (int)((double)y/zoom + drawLine[i].y[j+1]/zoom);
+
+            // draw the line
+            drawNormalLine(1, line_x[0], line_y[0], line_x[1], line_y[1], TITLE_FONT_COLOR);
+        }
+    }
 
 	// Draw UI
     SDL_RenderSetScale(render, 2.0, 2.0);
@@ -461,6 +577,10 @@ int editor(int level)
         if(filename == NULL) return 0;
     } else {
         filename = (char*) malloc(sizeof(char)*128);
+        if(filename == NULL) {
+            SDL_Log("Memory error!\n");
+            exit(EXIT_FAILURE);
+        }
         sprintf(filename, "assets/levels/%d", level);
     }
 
@@ -471,7 +591,6 @@ int editor(int level)
     }
 
     initEditor(level);
-    drawEditor();
     int status = 0;
 
     while(!status) {
@@ -485,5 +604,6 @@ int editor(int level)
     }
     if(status == 2) exit(EXIT_SUCCESS);
     cleanEditor();
+    free(filename);
     return 0;
 }

@@ -2,10 +2,11 @@
 
 int loadConfig()
 {
-    // todo later
+    /** todo later
     #ifdef __linux__
         char *configFile = "~/.config/skiciranje.conf";
-    #endif
+    #endif**/
+    return 0;
 }
 
 int loadLanguage(char *language) {
@@ -34,7 +35,7 @@ int loadLanguage(char *language) {
     while(fgets(tempString, 1000, file)!=NULL) textLines++;
 
     // allocate them
-    textLine = (char**) malloc(sizeof(char*)*textLines);
+    textLine = (char**) malloc(textLines*sizeof(char*));
     if(textLine == NULL) {
         SDL_Log("Memory error!\n");
         return 1;
@@ -46,12 +47,15 @@ int loadLanguage(char *language) {
     // load all the strings in
     for(int i = 0; i < textLines; i++) {
         fgets(tempString, 1000, file);
-        textLine[i] = (char *)malloc(sizeof(char)*strlen(tempString));
+        textLine[i] = (char *)malloc(sizeof(char)*strlen(tempString)+1);
         if(textLine[i] == NULL) {
             SDL_Log("Memory error!\n");
             return 1;
         }
         strcpy(textLine[i], tempString);
+
+        // NULL-termintate strings to avoid fucking memory corruptions
+        textLine[i][strlen(tempString)] = '\0';
     }
 
     free(tempString);

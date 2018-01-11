@@ -19,4 +19,7 @@ Then it's followed by lines which are specified as such:
 Type of line (1-thick, 2-thin, 3-cut, 4-dot-line, 5-free draw).
 
 But with free hand lines it looks like this:
-5 3 -50.0 -50.0 -
+5 3
+-50.0 -50.0
+-30.0 -40.0
+10.0 10.0

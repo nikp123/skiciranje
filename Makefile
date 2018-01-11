@@ -6,7 +6,7 @@ DB = gdb
 WINCC = wine ~/.wine/drive_c/Program\ Files/tcc/tcc.exe
 TARGET = executable
 TARGET_WIN = executable.exe
-LINKER = -lSDL2 -lSDL2_ttf -lSDL2_mixer -lSDL2_ttf -lm
+LINKER = -lSDL2 -lSDL2_ttf -lSDL2_mixer -lSDL2_ttf -lm -Wall -Werror
 WINLINKER = -ldirent -lSDL2 -lSDL2_ttf -lSDL2_mixer -lSDL2_ttf 
 default: build
 all: build_debug

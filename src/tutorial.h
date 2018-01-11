@@ -2,5 +2,5 @@
 #include "functions.h"
 
 extern int tutorial(void);
-static double offset;
-static SDL_Surface *backButton;
+//static double offset;
+//static SDL_Surface *backButton;
