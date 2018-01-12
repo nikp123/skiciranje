@@ -174,8 +174,6 @@ int loadEditorFile(char *filename, int level) {
         return 1;
     }
 
-    printf("%ld\n", sizeof(line2));
-
     // allocating the whole thing
     normalLine = malloc((numOfLines+1)*sizeof(line1));
     drawLine = malloc((numOfDraws+1)*sizeof(line2));
