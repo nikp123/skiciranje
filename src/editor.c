@@ -7,6 +7,7 @@ double zoom, x, y, cuts;
 SDL_Surface *positionSurface = NULL;
 SDL_Texture *positionTexture = NULL, *buttonTexture;
 char *positionString, mouseButton = false, lineType = 0, lineStatus = 0;
+char *filename;
 
 // I'm lazy, deal with it.
 #define thinLineButtonOffset 0
@@ -161,6 +162,29 @@ void deleteAllLines(void) {
     numOfLines ^= numOfLines;
     numOfDraws ^= numOfDraws;
     return;
+}
+
+int saveEditorFile(char *filename) {
+    FILE *file = fopen(filename, "wb");
+    if(file == NULL) return 1;
+
+    // write header
+    fprintf(file, "%d %d\n", numOfLines, numOfDraws);
+
+    // write individual lines
+    for(int i = 0; i < numOfLines; i++)
+        fprintf(file, "%d %lg %lg %lg %lg\n", normalLine[i].type, normalLine[i].x[0], normalLine[i].y[0], normalLine[i].x[1], normalLine[i].y[1]);
+
+    // write individual draws
+    for(int i = 0; i < numOfDraws; i++) {
+        fprintf(file, "%d %d\n", drawLine[i].type, drawLine[i].lenght);
+        for(int j = 0; j < drawLine[i].lenght; j++)
+            fprintf(file, "%lg %lg\n", drawLine[i].x[j], drawLine[i].y[j]);
+    }
+
+    // close file pointer
+    fclose(file);
+    return 0;
 }
 
 int loadEditorFile(char *filename, int level) {
@@ -415,7 +439,57 @@ int editorInput(void) {
                         lineType = (mouseCorX-1)/40+1;
                 else if(mouseCorY <= 40 && mouseCorX >= tempVarX - 40)
                     deleteAllLines();
-                else if(lineType&&lineType!=5){
+                else if(mouseCorY >= tempVarY - 40){
+                    switch((mouseCorX-1)/40)
+                    {
+                        case 0:    // load file
+                        {
+                            char *new;
+                            if(filename != NULL)
+                                    new = (char*)tinyfd_openFileDialog(textLine[14], filename, NUM_OF_FILE_TYPES, FILE_TYPES, textLine[15], 0);
+                            else    new = (char*)tinyfd_openFileDialog(textLine[14], NULL, NUM_OF_FILE_TYPES, FILE_TYPES, textLine[15], 0);
+
+                            // handle cancel
+                            if(new == NULL) break;
+
+                            // switch-a-roo
+                            filename = new;
+
+                            // wipe old memory
+                            cleanEditor();
+
+                            // reinitilize editor
+                            initEditor(0);
+
+                            if(loadEditorFile(filename, 0))
+                                // display error message
+                                tinyfd_messageBox(textLine[16], textLine[17], "ok", "error", 1);
+
+                            break;
+                        }
+                        case 1:    // save file
+                        {
+                            char *new;
+                            if(filename != NULL)
+                                    new = (char*)tinyfd_saveFileDialog(textLine[13], filename, NUM_OF_FILE_TYPES, FILE_TYPES, textLine[15]);
+                            else    new = (char*)tinyfd_saveFileDialog(textLine[13], "Untitled.sketch", NUM_OF_FILE_TYPES, FILE_TYPES, textLine[15]);
+
+                            // handle cancel
+                            if(new == NULL) break;
+
+                            // clear old string;
+                            filename = new;
+
+                            // display error message
+                            if(saveEditorFile(filename))
+                                // display error message
+                                tinyfd_messageBox(textLine[16], textLine[17], "ok", "error", 1);
+                            break;
+                        }
+                        default:
+                            break;
+                    }
+                }else if(lineType&&lineType!=5){
                     allocNewLine(lineType,
                                  (mouseCorX - tempVarX/2 - x/zoom)*zoom,
                                  (mouseCorY - tempVarY/2 - y/zoom)*zoom);
@@ -568,12 +642,11 @@ void drawEditor() {
 
 int editor(int level)
 {
-    char *filename;
     // get the name of the file you're about to open
     if(!level) {
-        filename = fileSelector();
+        filename = (char*)tinyfd_openFileDialog(textLine[14], NULL, NUM_OF_FILE_TYPES, FILE_TYPES, textLine[15], 0);
         if(filename == NULL) return 0;
-    } else {
+    } else if(level != INT_MAX){
         filename = (char*) malloc(sizeof(char)*128);
         if(filename == NULL) {
             SDL_Log("Memory error!\n");
@@ -582,11 +655,16 @@ int editor(int level)
         sprintf(filename, "assets/levels/%d", level);
     }
 
-    // open it up
-    if(loadEditorFile(filename, level)) {
-        SDL_Log("Error loading file: %s\n", filename);
-        return 0;
+    // open it up, also level == INT_MAX means that it's a new file
+    if(level != INT_MAX) {
+        if(loadEditorFile(filename, level)) {
+            SDL_Log("Error loading file: %s\n", filename);
+            return 0;
+        }
     }
+
+    // free memory
+    if(level&&filename!=NULL) free(filename);
 
     initEditor(level);
     int status = 0;

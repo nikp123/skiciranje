@@ -13,7 +13,7 @@
 #define SDL_USE_FLAGS       SDL_INIT_EVENTS&SDL_INIT_VIDEO&SDL_INIT_TIMER&SDL_INIT_AUDIO
 #define RENDERER_FLAGS      SDL_RENDERER_SOFTWARE&SDL_RENDERER_PRESENTVSYNC
 #define WINDOW_FLAGS        SDL_WINDOW_RESIZABLE
-#define WINDOW_TITLE        "Test program"
+#define WINDOW_TITLE        "Sketching"
 #define WINDOW_WIDTH        640
 #define WINDOW_HEIGHT       480
 #define CLEAR_COLOR         0xff222222
@@ -23,11 +23,15 @@
 #define DETAIL_FONT_COLOR   0xff666666
 #define FRAMERATE           60
 
+extern const char *FILE_TYPES[];
+extern const int NUM_OF_FILE_TYPES;
+
 // libraries and functions that we are going to borrow for our program
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <limits.h>
 // We must deal with cross platform crap again
 #ifdef __linux__
     #include <unistd.h>
@@ -37,6 +41,9 @@
 #endif
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
+
+// Deal with local libraries
+#include "tinyfiledialogs.h"
 
 extern int argumentCount;
 extern char **arguments;

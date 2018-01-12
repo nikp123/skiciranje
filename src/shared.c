@@ -15,3 +15,7 @@ SDL_Event event;
 
 // many functions use this ;P
 int glow;
+
+// handle file types
+const char *FILE_TYPES[] = {"*.sketch"};
+const int NUM_OF_FILE_TYPES = 1;

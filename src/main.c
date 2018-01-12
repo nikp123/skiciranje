@@ -16,20 +16,27 @@ int main(int argc, char *argv[])
     switch(menu()) {
         case 1: break;
         case 2:
-            switch(editor(0)) {
+            switch(editor(INT_MAX)) {
                 case 0:
                     goto gotoMenu;
                 default:
                     break;
             }
         case 3:
+            switch(editor(0)) {
+                case 0:
+                    goto gotoMenu;
+                default:
+                    break;
+            }
+        case 4:
             switch(tutorial()) {
                 case 0:
                     goto gotoMenu;
                 default:
                     break;
             }
-        //case 4: informationScreen(); break;
+        //case 5: informationScreen(); break;
         default:
             SDL_Log("Error! Undefined result in menu()!\n");
             break;
