@@ -11,7 +11,7 @@
 
 // forced variables
 #define SDL_USE_FLAGS       SDL_INIT_EVENTS&SDL_INIT_VIDEO&SDL_INIT_TIMER&SDL_INIT_AUDIO
-#define RENDERER_FLAGS      SDL_RENDERER_SOFTWARE&SDL_RENDERER_PRESENTVSYNC
+#define RENDERER_FLAGS      SDL_RENDERER_SOFTWARE&SDL_RENDERER_PRESENTVSYNC&SDL_RENDERER
 #define WINDOW_FLAGS        SDL_WINDOW_RESIZABLE
 #define WINDOW_TITLE        "Sketching"
 #define WINDOW_WIDTH        640
@@ -32,13 +32,8 @@ extern const int NUM_OF_FILE_TYPES;
 #include <string.h>
 #include <math.h>
 #include <limits.h>
-// We must deal with cross platform crap again
-#ifdef __linux__
-    #include <unistd.h>
-#endif
-#ifdef __WIN32__
-    #include <io.h>
-#endif
+
+// non-standard libraries
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
 

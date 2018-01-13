@@ -261,9 +261,8 @@ int initEditor(int level) {
     render = NULL;
 
     // prepare the new window
-    win = SDL_CreateWindow(WINDOW_TITLE, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_FLAGS&SDL_WINDOW_FULLSCREEN_DESKTOP);
-    render = SDL_CreateRenderer(win, -1, SDL_RENDERER_SOFTWARE);
-    if(win == NULL||render == NULL) {
+    if(SDL_CreateWindowAndRenderer(WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_FLAGS, &win, &render))
+    {
         SDL_Log("Failed to create window and renderer: %s\n", SDL_GetError());
         return 1;
     }
@@ -293,7 +292,7 @@ int initEditor(int level) {
     y = 0.0f;
     cuts = 10;
     grid = 1;
-    mouseButton = false; 
+    mouseButton = false;
 
     drawPosition();
     return 0;
@@ -527,12 +526,8 @@ int editorInput(void) {
                 // In case the user closes the window at any point
                 if(event.window.event == SDL_WINDOWEVENT_CLOSE)
                     return 2;
-                else if(event.window.event == SDL_WINDOWEVENT_RESIZED)
-                {
-                    SDL_FreeSurface(swin);
-                    swin = SDL_GetWindowSurface(win);
-                    SDL_FillRect(swin, NULL, CLEAR_COLOR);
-                    SDL_UpdateWindowSurface(win);
+                else if(event.window.event == SDL_WINDOWEVENT_RESIZED) {
+                    SDL_RenderClear(render);
                     SDL_FlushEvent(SDL_WINDOWEVENT);
                 }
                 break;
