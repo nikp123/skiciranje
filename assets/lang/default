@@ -17,3 +17,7 @@ Sketch file
 Error saving file
 Unable to create/write to file
 Load file
+Error while allocating memory (malloc/realloc failed)
+Error!
+Error while loading file! (wrong header)
+Error while loading file! (incorret syntax)

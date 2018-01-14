@@ -1,25 +1,39 @@
 The geometry file used by this program should look like this:
-
-5 0
-1 -50.0 -50.0 -50.0 50.0
-1 50.0 -50.0 50.0 50.0
-2 -50.0 -50.0 50.0 -50.0
-2 50.0 -50.0 50.0 50.0
-4 0.0 -50.0 0.0 50.0
-
-The first number indicates how many lines are there in the file itself, to help allocate enough memory for the lines.
-The second number indicated how many free-hand lines are there.
-Then it's followed by lines which are specified as such:
-1 -50.0 -50.0 -50.0 50.0 - the next four numbers are specific for non-free hand lines
-|   |      |    |
-|   |      |    |   Second Y coordinate (in milimeters)
-|   |      |   Second X coordinate (in milimeters)
-|   |    First Y coordinate (in milimeters)
-|  First X coordinate (in milimeters)
-Type of line (1-thick, 2-thin, 3-cut, 4-dot-line, 5-free draw).
-
-But with free hand lines it looks like this:
+6
+1 2
+-50.0 -50.0
+-50.0 50.0
+1 2
+50.0 -50.0
+50.0 50.0
+2 2
+-50.0 -50.0
+50.0 -50.0
+2 2
+50.0 -50.0
+50.0 50.0
+4 2
+0.0 -50.0
+0.0 50.0
 5 3
 -50.0 -50.0
 -30.0 -40.0
 10.0 10.0
+
+The single number on the first line represents the number of lines in the file.
+Now we enter an loop of lines.
+The first text line of the first line has two variables, it's type and it's lenght. (lenght must not be lower than 2)
+In the next number of lenght lines we enter individual X and Y coordinates.
+So for the first line it follows:
+x[1] = -50.0 y[1] = -50.0
+x[2] = -50.0 y[2] = 50.0
+and so on...
+
+Now line types represent how they are shown to the user/how the user interacts with them.
+like fxp.
+
+Type 1 = normal line
+Type 2 = thick line
+Type 3 = line-stop-line line
+Type 4 = line-dot-line line
+and type 5 which is free hand drawing.

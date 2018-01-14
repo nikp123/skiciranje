@@ -3,3 +3,4 @@
 
 //static void drawPosition(void);
 extern int editor(int level);
+void discardNewLine(void);

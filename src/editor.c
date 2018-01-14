@@ -1,6 +1,6 @@
 #include "editor.h"
 
-int numOfLines, numOfDraws;
+int lines, drawableLines;
 int special, grid;
 int lastX, lastY;
 double zoom, x, y, cuts;
@@ -9,124 +9,103 @@ SDL_Texture *positionTexture = NULL, *buttonTexture;
 char *positionString, mouseButton = false, lineType = 0, lineStatus = 0;
 char *filename;
 
-// I'm lazy, deal with it.
-#define thinLineButtonOffset 0
-#define thickLineButtonOffset 20
-#define cutLineButton 40
-#define dotLineButton 60
-#define drawLineButton 80
-#define clearButton 100
-#define saveButton 120
-#define backButton 140
-#define fileButton 160
-
-typedef struct {
-    Uint32 type;
-    double x[2];
-    double y[2];
-} line1;
-
 typedef struct {
     Uint32 type;
     Uint32 lenght;
     double *x;
     double *y;
-} line2;
+} line1;
 
-line1 *normalLine;
-line2 *drawLine;
+line1 *line;
 
-void allocNewLine(int type, double posX, double posY) {
-    numOfLines++;
-    line1 *new;
-
-    if(normalLine == NULL) new = malloc(2*sizeof(line1));
-    else new = realloc(normalLine, (numOfLines+1)*sizeof(line1));
-
-    if(new == NULL) {
-        SDL_Log("Uh oh! Something went terribly wrong! The program is going to crash, NOW!\n");
-        exit(EXIT_FAILURE);
-    }
-
-    normalLine = new;
-    normalLine[numOfLines-1].x[0] = posX;
-    normalLine[numOfLines-1].y[0] = posY;
-    normalLine[numOfLines-1].x[1] = posX;
-    normalLine[numOfLines-1].y[1] = posY;
-    normalLine[numOfLines-1].type = type;
-    lineStatus = 1;
+void redo(void) {
+    if(drawableLines != lines) drawableLines++;
     return;
 }
 
-void allocNewDraw(int type, double posX, double posY) {
-    line2 *new;
+void undo(void) {
+    if(drawableLines != 0) drawableLines--;
+    return;
+}
 
-    numOfDraws++;
+void allocNewLine(int type, double posX, double posY, int drawType) {
+    line1 *new;
 
-    if(drawLine != NULL) new = realloc(drawLine, (numOfDraws+1)*sizeof(line2));
-    else new = malloc(sizeof(line2)*2);
+    // free memory from redos
+    while(lines > drawableLines)
+        discardNewLine();
 
+    lines++;
+    drawableLines++;
+
+    new = realloc(line, (lines+1)*sizeof(line1));
     if(new == NULL) {
-        SDL_Log("Uh oh! Something went terribly wrong! The program is going to crash, NOW!\n");
+        tinyfd_messageBox(textLine[20], textLine[19], "ok", "error", 1);
+        SDL_Log("realloc/malloc failed at: %d\n", __LINE__-3);
         exit(EXIT_FAILURE);
     }
 
-    drawLine = new;
-    drawLine[numOfDraws-1].lenght = 1;
-    drawLine[numOfDraws-1].x = (double*)malloc(101*sizeof(double));
-    drawLine[numOfDraws-1].y = (double*)malloc(101*sizeof(double));
-    if(drawLine[numOfDraws-1].x == NULL||drawLine[numOfDraws-1].y == NULL) {
-        SDL_Log("Memory error!\n");
+    line = new;
+    line[lines-1].x = (double*)malloc((drawType ? 101 : 3)*sizeof(double));
+    line[lines-1].y = (double*)malloc((drawType ? 101 : 3)*sizeof(double));
+    if(line[lines-1].x==NULL||line[lines-1].y==NULL) {
+        tinyfd_messageBox(textLine[20], textLine[19], "ok", "error", 1);
+        SDL_Log("realloc/malloc failed at: %d or %d\n", __LINE__-4, __LINE__-3);
         exit(EXIT_FAILURE);
     }
-    drawLine[numOfDraws-1].x[0] = posX;
-    drawLine[numOfDraws-1].y[0] = posY;
-    drawLine[numOfDraws-1].type = type;
+    if(!drawType) {
+        line[lines-1].x[1] = posX;
+        line[lines-1].y[1] = posY;
+    }
+    line[lines-1].x[0] = posX;
+    line[lines-1].y[0] = posY;
+    line[lines-1].type = type;
+    line[lines-1].lenght = drawType ? 1 : 2;
 
-    lineStatus = 2;
+    // 0 == nothing
+    // 1 == line mode
+    // 2 == draw mode
+    lineStatus = drawType+1;
     return;
 }
 
 void addPointToNewDraw(double posX, double posY) {
     // increment the pointer
-    drawLine[numOfDraws-1].lenght++;
+    line[lines-1].lenght++;
 
     // grow by every 100th
-    if(((int)drawLine[numOfDraws-1].lenght/100) - ((int)(drawLine[numOfDraws-1].lenght-1)/100)) {
+    if(((int)line[lines-1].lenght/100) - ((int)(line[lines-1].lenght-1)/100)) {
         // grow by 100 points
-        double *new1, *new2,
-                *old1 = drawLine[numOfDraws-1].x,
-                *old2 = drawLine[numOfDraws-1].y;
-        new1 = realloc(old1, (drawLine[numOfDraws-1].lenght+101)*sizeof(double));
-        new2 = realloc(old2, (drawLine[numOfDraws-1].lenght+101)*sizeof(double));
+        double *new1, *new2;
+        new1 = realloc(line[lines-1].x, (line[lines-1].lenght+101)*sizeof(double));
+        new2 = realloc(line[lines-1].y, (line[lines-1].lenght+101)*sizeof(double));
         if(new1 == NULL||new2 == NULL) {
-            SDL_Log("Memory error!\n");
+            tinyfd_messageBox(textLine[20], textLine[19], "ok", "error", 1);
+            SDL_Log("realloc/malloc failed at: %d or %d\n", __LINE__-4, __LINE__-3);
             exit(EXIT_FAILURE);
         }
-        drawLine[numOfDraws-1].x = new1;
-        drawLine[numOfDraws-1].y = new2;
+        line[lines-1].x = new1;
+        line[lines-1].y = new2;
     }
 
-    int potato = drawLine[numOfDraws-1].lenght-1;
-
     // apply the new points
-    drawLine[numOfDraws-1].x[potato] = posX;
-    drawLine[numOfDraws-1].y[potato] = posY;
+    line[lines-1].x[line[lines-1].lenght-1] = posX;
+    line[lines-1].y[line[lines-1].lenght-1] = posY;
     return;
 }
 
 void finishNewDraw(void) {
     // reallocate to save on memory
-    double *new = realloc(drawLine[numOfDraws-1].x, (drawLine[numOfDraws-1].lenght+1)*sizeof(double));
-    drawLine[numOfDraws-1].x = new;
-    new = realloc(drawLine[numOfDraws-1].y, (drawLine[numOfDraws-1].lenght+1)*sizeof(double));
-    drawLine[numOfDraws-1].y = new;
-
-    // check if something went wrong
-    if(drawLine[numOfDraws-1].x==NULL||drawLine[numOfDraws-1].y==NULL) {
-        SDL_Log("Memory error!\n");
+    double *new1, *new2;
+    new1 = realloc(line[lines-1].x, (line[lines-1].lenght+1)*sizeof(double));
+    new2 = realloc(line[lines-1].y, (line[lines-1].lenght+1)*sizeof(double));
+    if(new1 == NULL||new2 == NULL) {
+        tinyfd_messageBox(textLine[20], textLine[19], "ok", "error", 1);
+        SDL_Log("realloc/malloc failed at: %d or %d\n", __LINE__-4, __LINE__-3);
         exit(EXIT_FAILURE);
     }
+    line[lines-1].x = new1;
+    line[lines-1].y = new2;
 
     // reset line status
     lineStatus = 0;
@@ -134,33 +113,39 @@ void finishNewDraw(void) {
 }
 
 void discardNewLine(void) {
-    if(lineStatus!=1) return;
-    numOfLines--;
-    lineStatus = 0;
-    line1 *new = realloc(normalLine, (numOfLines+1)*sizeof(line1));
+    if(!lines) return;
+
+    free(line[lines-1].x);
+    free(line[lines-1].y);
+
+    lines--;
+
+    // correct redos
+    if(lineStatus == 1) drawableLines = lines;
+
+    line1 *new = realloc(line, (lines+1)*sizeof(line1));
     if(new == NULL) {
-        SDL_Log("Uh oh! Something went terribly wrong! The program is going to crash, NOW!\n");
+        tinyfd_messageBox(textLine[20], textLine[19], "ok", "error", 1);
+        SDL_Log("realloc/malloc failed at: %d\n", __LINE__-3);
         exit(EXIT_FAILURE);
     }
 
-    normalLine = new;
+    line = new;
     return;
 }
 
 void deleteAllLines(void) {
-    free(normalLine);
-    for(int i = 0; i < numOfDraws; i++) {
-        free(drawLine[i].x);
-        free(drawLine[i].y);
+    if(line != NULL) {
+        for(int i = 0; i < lines; i++) {
+            free(line[i].x);
+            free(line[i].y);
+        }
+        free(line);
+        line = NULL;
     }
-    free(drawLine);
-
-    drawLine = NULL;
-    normalLine = NULL;
-
+    drawableLines = 0;
     lineStatus = 0;
-    numOfLines ^= numOfLines;
-    numOfDraws ^= numOfDraws;
+    lines = 0;
     return;
 }
 
@@ -168,18 +153,17 @@ int saveEditorFile(char *filename) {
     FILE *file = fopen(filename, "wb");
     if(file == NULL) return 1;
 
+    // wipe redos
+    while(lines != drawableLines) discardNewLine();
+
     // write header
-    fprintf(file, "%d %d\n", numOfLines, numOfDraws);
+    fprintf(file, "%d\n", lines);
 
     // write individual lines
-    for(int i = 0; i < numOfLines; i++)
-        fprintf(file, "%d %lg %lg %lg %lg\n", normalLine[i].type, normalLine[i].x[0], normalLine[i].y[0], normalLine[i].x[1], normalLine[i].y[1]);
-
-    // write individual draws
-    for(int i = 0; i < numOfDraws; i++) {
-        fprintf(file, "%d %d\n", drawLine[i].type, drawLine[i].lenght);
-        for(int j = 0; j < drawLine[i].lenght; j++)
-            fprintf(file, "%lg %lg\n", drawLine[i].x[j], drawLine[i].y[j]);
+    for(int i = 0; i < lines; i++){
+        fprintf(file, "%d %d\n", line[i].type, line[i].lenght);
+        for(int j = 0; j < line[i].lenght; j++)
+            fprintf(file, "%lg %lg\n", line[i].x[j], line[i].y[j]);
     }
 
     // close file pointer
@@ -193,48 +177,50 @@ int loadEditorFile(char *filename, int level) {
     if(file == NULL) return 1;
 
     // reading and vertifying the first line
-    if(fscanf(file, "%d %d\n", &numOfLines, &numOfDraws) != 2) {
-        SDL_Log("Error: unable to read file info!\n");
+    if(fscanf(file, "%d\n", &lines) != 1) {
+        tinyfd_messageBox(textLine[20], textLine[21], "ok", "error", 1);
+        SDL_Log("fscanf failed at: %d\n", __LINE__-2);
         return 1;
     }
+    drawableLines = lines;
 
     // allocating the whole thing
-    normalLine = malloc((numOfLines+1)*sizeof(line1));
-    drawLine = malloc((numOfDraws+1)*sizeof(line2));
-    if(normalLine==NULL||drawLine==NULL) {
-        SDL_Log("Memory error!\n");
-        return 1;
-    }
-
-    // allocating our string
-    char *tempString = malloc(1024);
-    if(tempString == NULL) {
-        SDL_Log("Memory error!\n");
+    line = malloc((lines+1)*sizeof(line1));
+    if(line==NULL) {
+        tinyfd_messageBox(textLine[20], textLine[19], "ok", "error", 1);
+        SDL_Log("realloc/malloc failed at: %d\n", __LINE__-3);
         return 1;
     }
 
     // reading and importing the whole thing
-    int doneLines = 0, doneDraws = 0;
-    while(fgets(tempString, 1024, file) != NULL) {
-        if(doneLines < numOfLines){
-            sscanf(tempString, "%d %lf %lf %lf %lf", &normalLine[doneLines].type, &normalLine[doneLines].x[0],
-                    &normalLine[doneLines].y[0], &normalLine[doneLines].x[1], &normalLine[doneLines].y[1]);
-			doneLines++;
-        } else if(doneDraws < numOfDraws){
-            sscanf(tempString, "%d %d\n", &drawLine[doneDraws].type, &drawLine[doneDraws].lenght);
-            drawLine[doneDraws].x = malloc(drawLine[doneDraws].lenght*sizeof(double));
-            drawLine[doneDraws].y = malloc(drawLine[doneDraws].lenght*sizeof(double));
-            if(drawLine[doneDraws].x==NULL||drawLine[doneDraws].y==NULL) {
-                SDL_Log("Memory allocation error!\n");
-                exit(EXIT_FAILURE);
-            }
-            for(int i = 0; i < drawLine[doneDraws].lenght; i++)
-                fscanf(file, "%lf %lf\n", &drawLine[doneDraws].x[i], &drawLine[doneDraws].y[i]);
-            doneDraws++;
+    for(int doneLines = 0; doneLines < lines; doneLines++) {
+        if(fscanf(file, "%d %d", &line[doneLines].type, &line[doneLines].lenght) != 2) {
+            tinyfd_messageBox(textLine[20], textLine[22], "ok", "error", 1);
+            SDL_Log("fscanf failed at: %d\n", __LINE__-2);
+            return 1;
+        }
+
+        if(line[doneLines].type < 5 && line[doneLines].lenght != 2)
+            SDL_Log("WARNING: Potential corruption while loading line %d\nType %d lenght is %d, but it should be 2.\n",
+            doneLines+1, line[doneLines].type, line[doneLines].lenght);
+
+        line[doneLines].x = malloc((line[doneLines].lenght+1)*sizeof(double));
+        line[doneLines].y = malloc((line[doneLines].lenght+1)*sizeof(double));
+        if(line[doneLines].x == NULL||line[doneLines].y == NULL) {
+            tinyfd_messageBox(textLine[20], textLine[19], "ok", "error", 1);
+            SDL_Log("realloc/malloc failed at: %d or %d\n", __LINE__-4, __LINE__-3);
+            return 1;
+        }
+
+        for(int i = 0; i < line[doneLines].lenght; i++) {
+            if(fscanf(file, "%lf %lf", &line[doneLines].x[i], &line[doneLines].y[i]) != 2) {
+                tinyfd_messageBox(textLine[20], textLine[22], "ok", "error", 1);
+                SDL_Log("fscanf failed at: %d\n", __LINE__-2);
+                return 1;
+           }
         }
     }
 
-    free(tempString);
     fclose(file);
     return 0;
 }
@@ -299,7 +285,6 @@ int initEditor(int level) {
 }
 
 void drawNormalLine(int type, int x1, int y1, int x2, int y2, Uint32 color) {
-
     // set draw color
     SDL_SetRenderDrawColor(render, color >> 24 % 8, color >> 16 % 8, color >> 8 % 8, color % 8);
 
@@ -392,6 +377,12 @@ int editorInput(void) {
 					case SDLK_g:
 						grid = !grid;
 						break;
+                    case SDLK_x:
+                        undo();
+                        break;
+                    case SDLK_c:
+                        redo();
+                        break;
                 }
                 drawPosition();
                 break;
@@ -411,8 +402,8 @@ int editorInput(void) {
 					lastX = mouseCorX;
 					lastY = mouseCorY;
                 } else if(!mouseButton&&lineStatus==1) {
-                    normalLine[numOfLines-1].x[1] = (mouseCorX - tempVarX/2 - x/zoom)*zoom;
-                    normalLine[numOfLines-1].y[1] = (mouseCorY - tempVarY/2 - y/zoom)*zoom;
+                    line[lines-1].x[1] = (mouseCorX - tempVarX/2 - x/zoom)*zoom;
+                    line[lines-1].y[1] = (mouseCorY - tempVarY/2 - y/zoom)*zoom;
                 } else if(mouseButton&&lineStatus==2)
                     addPointToNewDraw((mouseCorX - tempVarX/2 - x/zoom)*zoom, (mouseCorY - tempVarY/2 - y/zoom)*zoom);
 
@@ -438,6 +429,10 @@ int editorInput(void) {
                         lineType = (mouseCorX-1)/40+1;
                 else if(mouseCorY <= 40 && mouseCorX >= tempVarX - 40)
                     deleteAllLines();
+                else if(mouseCorY <= 40 && mouseCorX >= tempVarX - 120 && mouseCorX < tempVarX - 80)
+                    redo();
+                else if(mouseCorY <= 40 && mouseCorX >= tempVarX - 160 && mouseCorX < tempVarX - 120)
+                    undo();
                 else if(mouseCorY >= tempVarY - 40){
                     switch((mouseCorX-1)/40)
                     {
@@ -491,17 +486,17 @@ int editorInput(void) {
                 }else if(lineType&&lineType!=5){
                     allocNewLine(lineType,
                                  (mouseCorX - tempVarX/2 - x/zoom)*zoom,
-                                 (mouseCorY - tempVarY/2 - y/zoom)*zoom);
+                                 (mouseCorY - tempVarY/2 - y/zoom)*zoom, 0);
                     mouseButton = true;
                 }else if(lineType==5){
-                    allocNewDraw(lineType,
+                    allocNewLine(lineType,
                                  (mouseCorX - tempVarX/2 - x/zoom)*zoom,
-                                 (mouseCorY - tempVarY/2 - y/zoom)*zoom);
+                                 (mouseCorY - tempVarY/2 - y/zoom)*zoom, 1);
                     mouseButton = true;
                 }else if(lineStatus==1){
                     lineStatus = 0;
-                    normalLine[numOfLines-1].x[1] = (mouseCorX - tempVarX/2 - x/zoom)*zoom;
-                    normalLine[numOfLines-1].y[1] = (mouseCorY - tempVarY/2 - y/zoom)*zoom;
+                    line[lines-1].x[1] = (mouseCorX - tempVarX/2 - x/zoom)*zoom;
+                    line[lines-1].y[1] = (mouseCorY - tempVarY/2 - y/zoom)*zoom;
                 } mouseButton = true;
                 break;
             }
@@ -576,50 +571,36 @@ void drawEditor() {
     	}
     }
 
-
-    // draw normal lines
-    for(int i = 0; i < numOfLines; i++) {
+    // draw lines
+    for(int i = 0; i < drawableLines; i++) {
         int line_x[2], line_y[2];
 
-        // calculate the lines
-        line_x[0] = tempVarX/2 + (int)((double)x/zoom + (double)normalLine[i].x[0]/zoom);
-        line_x[1] = tempVarX/2 + (int)((double)x/zoom + (double)normalLine[i].x[1]/zoom);
-        line_y[0] = tempVarY/2 + (int)((double)y/zoom + (double)normalLine[i].y[0]/zoom);
-        line_y[1] = tempVarY/2 + (int)((double)y/zoom + (double)normalLine[i].y[1]/zoom);
-
-        // draw the line
-        drawNormalLine(normalLine[i].type, line_x[0], line_y[0], line_x[1], line_y[1], TITLE_FONT_COLOR);
-        // TODO: Implement different drawing methods
-    }
-
-
-    // draw special lines
-    for(int i = 0; i < numOfDraws; i++) {
-        int line_x[2], line_y[2];
-
-        for(int j = 0; j < drawLine[i].lenght-1; j++){
+        for(int j = 0; j < line[i].lenght-1; j++){
             // calculate the lines
-            line_x[0] = tempVarX/2 + (int)((double)x/zoom + drawLine[i].x[j]/zoom);
-            line_x[1] = tempVarX/2 + (int)((double)x/zoom + drawLine[i].x[j+1]/zoom);
-            line_y[0] = tempVarY/2 + (int)((double)y/zoom + drawLine[i].y[j]/zoom);
-            line_y[1] = tempVarY/2 + (int)((double)y/zoom + drawLine[i].y[j+1]/zoom);
+            line_x[0] = tempVarX/2 + (int)((double)x/zoom + line[i].x[j]/zoom);
+            line_x[1] = tempVarX/2 + (int)((double)x/zoom + line[i].x[j+1]/zoom);
+            line_y[0] = tempVarY/2 + (int)((double)y/zoom + line[i].y[j]/zoom);
+            line_y[1] = tempVarY/2 + (int)((double)y/zoom + line[i].y[j+1]/zoom);
 
             // draw the line
-            drawNormalLine(1, line_x[0], line_y[0], line_x[1], line_y[1], TITLE_FONT_COLOR);
+            drawNormalLine(line[i].type, line_x[0], line_y[0], line_x[1], line_y[1], TITLE_FONT_COLOR);
         }
     }
 
 	// Draw UI
     SDL_RenderSetScale(render, 2.0, 2.0);
-    SDL_RenderCopy(render, buttonTexture, &(SDL_Rect){0, lineType == 1 ? 20 : 0,20,20}, &(SDL_Rect){0,0,20,20});
-    SDL_RenderCopy(render, buttonTexture, &(SDL_Rect){20, lineType == 2 ? 20 : 0,20,20}, &(SDL_Rect){20,0,20,20});
-    SDL_RenderCopy(render, buttonTexture, &(SDL_Rect){40, lineType == 3 ? 20 : 0,20,20}, &(SDL_Rect){40,0,20,20});
-    SDL_RenderCopy(render, buttonTexture, &(SDL_Rect){60, lineType == 4 ? 20 : 0,20,20}, &(SDL_Rect){60,0,20,20});
-    SDL_RenderCopy(render, buttonTexture, &(SDL_Rect){80, lineType == 5 ? 20 : 0,20,20}, &(SDL_Rect){80,0,20,20});
+    SDL_RenderCopy(render, buttonTexture, &(SDL_Rect){0, lineType == 1 ? 20 : 0,20,20}, &(SDL_Rect){0,0,20,20});    // line button
+    SDL_RenderCopy(render, buttonTexture, &(SDL_Rect){20, lineType == 2 ? 20 : 0,20,20}, &(SDL_Rect){20,0,20,20});  // thick line button
+    SDL_RenderCopy(render, buttonTexture, &(SDL_Rect){40, lineType == 3 ? 20 : 0,20,20}, &(SDL_Rect){40,0,20,20});  // line-stop-line button
+    SDL_RenderCopy(render, buttonTexture, &(SDL_Rect){60, lineType == 4 ? 20 : 0,20,20}, &(SDL_Rect){60,0,20,20});  // line-dot-line button
+    SDL_RenderCopy(render, buttonTexture, &(SDL_Rect){80, lineType == 5 ? 20 : 0,20,20}, &(SDL_Rect){80,0,20,20});  // draw button
 
-    SDL_RenderCopy(render, buttonTexture, &(SDL_Rect){160, 0, 20, 20}, &(SDL_Rect){0, tempVarY/2-20, 20, 20});
-    SDL_RenderCopy(render, buttonTexture, &(SDL_Rect){120, 0, 20, 20}, &(SDL_Rect){20, tempVarY/2-20, 20, 20});
-    SDL_RenderCopy(render, buttonTexture, &(SDL_Rect){100, 0, 20, 20}, &(SDL_Rect){tempVarX/2-20, 0, 20, 20});
+    SDL_RenderCopy(render, buttonTexture, &(SDL_Rect){160, 0, 20, 20}, &(SDL_Rect){0, tempVarY/2-20, 20, 20});                                  // load button
+    SDL_RenderCopy(render, buttonTexture, &(SDL_Rect){120, 0, 20, 20}, &(SDL_Rect){20, tempVarY/2-20, 20, 20});                                 // save button
+    SDL_RenderCopy(render, buttonTexture, &(SDL_Rect){100, 0, 20, 20}, &(SDL_Rect){tempVarX/2-20, 0, 20, 20});                                  // delete all button
+    SDL_RenderCopy(render, buttonTexture, &(SDL_Rect){140, drawableLines > 0 ? 0 : 20, 20, 20}, &(SDL_Rect){tempVarX/2-80, 0, 20, 20});         // back button
+    SDL_RenderCopyEx(render, buttonTexture, &(SDL_Rect){140, lines == drawableLines ? 20 : 0, 20, 20}, &(SDL_Rect){tempVarX/2-60, 0, 20, 20},   // redo button
+                     0, NULL, SDL_FLIP_HORIZONTAL);
 
     // In the bottom right draw the position
     SDL_RenderSetScale(render, 1.0, 1.0);
