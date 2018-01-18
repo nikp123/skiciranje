@@ -21,3 +21,5 @@ Error while allocating memory (malloc/realloc failed)
 Error!
 Error while loading file! (wrong header)
 Error while loading file! (incorret syntax)
+Question
+Do you want to save changes before exiting?

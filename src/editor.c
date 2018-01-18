@@ -339,6 +339,35 @@ void cleanEditor() {
     return;
 }
 
+void promptBeforeExit(void) {
+    // ask user for their opinion
+    if(special) return;
+
+    int dialogResult = tinyfd_messageBox(textLine[23], textLine[24], "yesno", "question", 1);
+
+    if(!dialogResult) return;
+
+    char *new;
+    if(filename != NULL)
+            new = (char*)tinyfd_saveFileDialog(textLine[13], filename, NUM_OF_FILE_TYPES, FILE_TYPES, textLine[15]);
+    else    new = (char*)tinyfd_saveFileDialog(textLine[13], "Untitled.sketch", NUM_OF_FILE_TYPES, FILE_TYPES, textLine[15]);
+
+    // handle cancel
+    if(new == NULL) return;
+
+    // clear old string;
+    filename = new;
+
+    tryAgain:
+    // display error message
+    if(saveEditorFile(filename)) {
+        // display error message
+        tinyfd_messageBox(textLine[16], textLine[17], "ok", "error", 1);
+        goto tryAgain;
+    }
+    return;
+}
+
 int editorInput(void) {
     while(SDL_PollEvent(&event))
     {
@@ -351,6 +380,8 @@ int editorInput(void) {
                 switch(event.key.keysym.sym)
                 {
                     case SDLK_ESCAPE:
+                        promptBeforeExit();
+                        SDL_FlushEvent(SDL_KEYDOWN);
                         return 1;
                     case SDLK_LEFT:
                         x += zoom/0.1;
@@ -429,7 +460,10 @@ int editorInput(void) {
                         lineType = (mouseCorX-1)/40+1;
                 else if(mouseCorY <= 40 && mouseCorX >= tempVarX - 40)
                     deleteAllLines();
-                else if(mouseCorY <= 40 && mouseCorX >= tempVarX - 120 && mouseCorX < tempVarX - 80)
+                else if(mouseCorY <= 80 && mouseCorX >= tempVarX - 40) {
+                    promptBeforeExit();
+                    return 1;
+                } else if(mouseCorY <= 40 && mouseCorX >= tempVarX - 120 && mouseCorX < tempVarX - 80)
                     redo();
                 else if(mouseCorY <= 40 && mouseCorX >= tempVarX - 160 && mouseCorX < tempVarX - 120)
                     undo();
@@ -598,6 +632,7 @@ void drawEditor() {
     SDL_RenderCopy(render, buttonTexture, &(SDL_Rect){160, 0, 20, 20}, &(SDL_Rect){0, tempVarY/2-20, 20, 20});                                  // load button
     SDL_RenderCopy(render, buttonTexture, &(SDL_Rect){120, 0, 20, 20}, &(SDL_Rect){20, tempVarY/2-20, 20, 20});                                 // save button
     SDL_RenderCopy(render, buttonTexture, &(SDL_Rect){100, 0, 20, 20}, &(SDL_Rect){tempVarX/2-20, 0, 20, 20});                                  // delete all button
+    SDL_RenderCopy(render, buttonTexture, &(SDL_Rect){180, 0, 20, 20}, &(SDL_Rect){tempVarX/2-20, 20, 20, 20});                                 // menu
     SDL_RenderCopy(render, buttonTexture, &(SDL_Rect){140, drawableLines > 0 ? 0 : 20, 20, 20}, &(SDL_Rect){tempVarX/2-80, 0, 20, 20});         // back button
     SDL_RenderCopyEx(render, buttonTexture, &(SDL_Rect){140, lines == drawableLines ? 20 : 0, 20, 20}, &(SDL_Rect){tempVarX/2-60, 0, 20, 20},   // redo button
                      0, NULL, SDL_FLIP_HORIZONTAL);
@@ -639,6 +674,9 @@ int editor(int level)
         }
     }
 
+    // small patch
+    if(level == INT_MAX) level = 0;
+
     // free memory
     if(level&&filename!=NULL) free(filename);
 
@@ -656,6 +694,5 @@ int editor(int level)
     }
     if(status == 2) exit(EXIT_SUCCESS);
     cleanEditor();
-    free(filename);
     return 0;
 }
