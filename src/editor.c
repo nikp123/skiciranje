@@ -374,6 +374,7 @@ int editorInput(void) {
         switch(event.type)
         {
             case SDL_QUIT:
+                promptBeforeExit();
                 return 2;
             case SDL_KEYDOWN:
                 // Get keystroke
