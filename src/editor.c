@@ -1,7 +1,7 @@
 #include "editor.h"
 
 int lines, drawableLines;
-int special, grid;
+int special, grid, snap;
 int lastX, lastY;
 double zoom, x, y, cuts;
 SDL_Surface *positionSurface = NULL;
@@ -26,6 +26,29 @@ void redo(void) {
 void undo(void) {
     if(drawableLines != 0) drawableLines--;
     return;
+}
+
+void snapIfPossible(double posX, double posY) {
+    if(snap){
+        int tempVarX, tempVarY;
+        SDL_GetWindowSize(win, &tempVarX, &tempVarY);
+
+        // snap to grid
+        if(fabs(fmod(posX, cuts)) < cuts/4) posX = round(posX/cuts)*cuts;
+        if(fabs(fmod(posY, cuts)) < cuts/4) posY = round(posY/cuts)*cuts;
+
+        // snap to an previous line
+        for(int i = 0; i < lines-1; i++) {
+        for(int j = 0; j < line[i].lenght; j++) {
+            if(sqrt(pow(line[i].x[j]-posX, 2)+pow(line[i].y[j] - posY, 2)) < cuts/4) {
+                posX = line[i].x[j];
+                posY = line[i].y[j];
+            }
+        }}
+    }
+    // replace the original value
+    line[lines-1].x[line[lines-1].lenght-1] = posX;
+    line[lines-1].y[line[lines-1].lenght-1] = posY;
 }
 
 void allocNewLine(int type, double posX, double posY, int drawType) {
@@ -57,8 +80,11 @@ void allocNewLine(int type, double posX, double posY, int drawType) {
         line[lines-1].x[1] = posX;
         line[lines-1].y[1] = posY;
     }
+
     line[lines-1].x[0] = posX;
     line[lines-1].y[0] = posY;
+        line[lines-1].lenght = 1;
+        snapIfPossible(posX, posY);
     line[lines-1].type = type;
     line[lines-1].lenght = drawType ? 1 : 2;
 
@@ -278,6 +304,7 @@ int initEditor(int level) {
     y = 0.0f;
     cuts = 10;
     grid = 1;
+    snap = 1;
     mouseButton = false;
 
     drawPosition();
@@ -444,6 +471,9 @@ int editorInput(void) {
 					case SDLK_g:
 						grid = !grid;
 						break;
+                    case SDLK_h:
+                        snap = !snap;
+                        break;
                     case SDLK_x:
                         undo();
                         break;
@@ -468,9 +498,8 @@ int editorInput(void) {
 					} 
 					lastX = mouseCorX;
 					lastY = mouseCorY;
-                } else if(!mouseButton&&lineStatus==1) {
-                    line[lines-1].x[1] = (mouseCorX - tempVarX/2 - x/zoom)*zoom;
-                    line[lines-1].y[1] = (mouseCorY - tempVarY/2 - y/zoom)*zoom;
+                } else if(!mouseButton&&lineStatus==1) { 
+                    snapIfPossible((mouseCorX - tempVarX/2 - x/zoom)*zoom, (mouseCorY - tempVarY/2 - y/zoom)*zoom);
                 } else if(mouseButton&&lineStatus==2)
                     addPointToNewDraw((mouseCorX - tempVarX/2 - x/zoom)*zoom, (mouseCorY - tempVarY/2 - y/zoom)*zoom);
 
@@ -515,20 +544,11 @@ int editorInput(void) {
 
                             // handle cancel
                             if(new == NULL) break;
-
-                            // switch-a-roo
                             filename = new;
-
-                            // wipe old memory
                             cleanEditor();
-
-                            // reinitilize editor
                             initEditor(0);
 
-                            if(loadEditorFile(filename, 0))
-                                // display error message
-                                tinyfd_messageBox(textLine[16], textLine[17], "ok", "error", 1);
-
+                            if(loadEditorFile(filename, 0)) tinyfd_messageBox(textLine[16], textLine[17], "ok", "error", 1);
                             break;
                         }
                         case 1:    // save file
@@ -540,14 +560,8 @@ int editorInput(void) {
 
                             // handle cancel
                             if(new == NULL) break;
-
-                            // clear old string;
                             filename = new;
-
-                            // display error message
-                            if(saveEditorFile(filename))
-                                // display error message
-                                tinyfd_messageBox(textLine[16], textLine[17], "ok", "error", 1);
+                            if(saveEditorFile(filename)) tinyfd_messageBox(textLine[16], textLine[17], "ok", "error", 1);
                             break;
                         }
                         default:
