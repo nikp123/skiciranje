@@ -285,6 +285,10 @@ int initEditor(int level) {
 }
 
 void drawNormalLine(int type, int x1, int y1, int x2, int y2, Uint32 color) {
+    // get window size
+    int tempVarX, tempVarY;
+    SDL_GetWindowSize(win, &tempVarX, &tempVarY);
+
     // set draw color
     SDL_SetRenderDrawColor(render, color >> 24 % 8, color >> 16 % 8, color >> 8 % 8, color % 8);
 
@@ -304,6 +308,37 @@ void drawNormalLine(int type, int x1, int y1, int x2, int y2, Uint32 color) {
                 SDL_RenderDrawLine(render, x1+1, y1, x2+1, y2);
             }
             break;
+        case 3:
+        {
+            float xRatio = (x2-x1)/floor(sqrt(pow(x2-x1, 2)+pow(y2-y1, 2)));
+            float yRatio = (y2-y1)/floor(sqrt(pow(x2-x1, 2)+pow(y2-y1, 2)));
+            float lineLen = sqrt(pow((x2-x1), 2)+pow((y2-y1), 2));
+            for(int i = 0; i < floor(lineLen)-6; i += 12){
+                if(x1+i*xRatio < 0) continue;
+                if(y1+i*yRatio < 0) continue;
+                if(x1+i*xRatio > tempVarX) continue;
+                if(y1+i*yRatio > tempVarY) continue;
+
+                SDL_RenderDrawLine(render, x1+i*xRatio, y1+i*yRatio, x1+(i+5)*xRatio, y1+(i+5)*yRatio);
+            }
+            break;
+        }
+        case 4:
+        {
+            float xRatio = (x2-x1)/floor(sqrt(pow(x2-x1, 2)+pow(y2-y1, 2)));
+            float yRatio = (y2-y1)/floor(sqrt(pow(x2-x1, 2)+pow(y2-y1, 2)));
+            float lineLen = sqrt(pow((x2-x1), 2)+pow((y2-y1), 2));
+            for(int i = 0; i < floor(lineLen)-6; i += 13){
+                if(x1+i*xRatio < 0) continue;
+                if(y1+i*yRatio < 0) continue;
+                if(x1+i*xRatio > tempVarX) continue;
+                if(y1+i*yRatio > tempVarY) continue;
+
+                SDL_RenderDrawLine(render, x1+i*xRatio, y1+i*yRatio, x1+(i+5)*xRatio, y1+(i+5)*yRatio);
+                SDL_RenderDrawPoint(render, x1+(i+9)*xRatio, y1+(i+9)*yRatio);
+            }
+            break;
+        }
         default:
             SDL_RenderDrawLine(render, x1, y1, x2, y2);
             break;
