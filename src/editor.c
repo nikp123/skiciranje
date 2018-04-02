@@ -618,27 +618,37 @@ void drawEditor() {
     // draw axis
     if(grid){
     	// X axis
-        int tempVar = tempVarX/2 + (int)((double)x/(double)zoom);
+    	int counter = 0;
+        int tempVar = tempVarX/2 + (int)((double)x/zoom);
+        double cutSize = cuts/zoom;
     	while(tempVar < tempVarX) {
     	    drawNormalLine(1, tempVar, 0, tempVar, tempVarY, DETAIL_FONT_COLOR);
-            tempVar += (int)((double)cuts/(double)zoom);
+            counter++;
+            tempVar = tempVarX/2 + x/zoom + cutSize*counter;
     	}
+    	counter = 0;
         tempVar = tempVarX/2 + (int)((double)x/(double)zoom);
     	while(tempVar > 0) {
     	    drawNormalLine(1, tempVar, 0, tempVar, tempVarY, DETAIL_FONT_COLOR);
-            tempVar -= (int)((double)cuts/(double)zoom);
+            counter++;
+            tempVar = tempVarX/2 + x/zoom - cutSize*counter;
     	}
+
     	// Y axis
+    	counter = 0;
         tempVar = tempVarY/2 + (int)((double)y/(double)zoom);
     	while(tempVar < tempVarY) {
     	    drawNormalLine(1, 0, tempVar, tempVarX, tempVar, DETAIL_FONT_COLOR);
-            tempVar += (int)((double)cuts/(double)zoom);
+    	    counter++;
+            tempVar = tempVarY/2 + y/zoom + cutSize*counter;
     	}
+    	counter = 0;
         tempVar = tempVarY/2 + (int)((double)y/(double)zoom);
     	while(tempVar > 0) {
     	    drawNormalLine(1, 0, tempVar, tempVarX, tempVar, DETAIL_FONT_COLOR);
-            tempVar -= (int)((double)cuts/(double)zoom);
-    	}
+    	    counter++;
+            tempVar = tempVarY/2 + y/zoom - cutSize*counter;
+        }
     }
 
     // draw lines
@@ -647,10 +657,10 @@ void drawEditor() {
 
         for(int j = 0; j < line[i].lenght-1; j++){
             // calculate the lines
-            line_x[0] = tempVarX/2 + (int)((double)x/zoom + line[i].x[j]/zoom);
-            line_x[1] = tempVarX/2 + (int)((double)x/zoom + line[i].x[j+1]/zoom);
-            line_y[0] = tempVarY/2 + (int)((double)y/zoom + line[i].y[j]/zoom);
-            line_y[1] = tempVarY/2 + (int)((double)y/zoom + line[i].y[j+1]/zoom);
+            line_x[0] = tempVarX/2 + (int)((double)x/zoom + (double)line[i].x[j]/zoom);
+            line_x[1] = tempVarX/2 + (int)((double)x/zoom + (double)line[i].x[j+1]/zoom);
+            line_y[0] = tempVarY/2 + (int)((double)y/zoom + (double)line[i].y[j]/zoom);
+            line_y[1] = tempVarY/2 + (int)((double)y/zoom + (double)line[i].y[j+1]/zoom);
 
             // draw the line
             drawNormalLine(line[i].type, line_x[0], line_y[0], line_x[1], line_y[1], TITLE_FONT_COLOR);
