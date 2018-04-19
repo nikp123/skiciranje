@@ -1,4 +1,4 @@
-#include "editor.h"
+﻿#include "editor.h"
 
 int lines, drawableLines;
 int special, grid, snap;
@@ -30,12 +30,11 @@ void undo(void) {
 
 void snapIfPossible(double posX, double posY) {
     if(snap){
-        int tempVarX, tempVarY;
-        SDL_GetWindowSize(win, &tempVarX, &tempVarY);
-
         // snap to grid
-        if(fabs(fmod(posX, cuts)) < cuts/4) posX = round(posX/cuts)*cuts;
-        if(fabs(fmod(posY, cuts)) < cuts/4) posY = round(posY/cuts)*cuts;
+        if(grid){
+            if(fabs(fmod(posX, cuts)) < cuts/4) posX = round(posX/cuts)*cuts;
+            if(fabs(fmod(posY, cuts)) < cuts/4) posY = round(posY/cuts)*cuts;
+        }
 
         // snap to an previous line
         for(int i = 0; i < lines-1; i++) {
@@ -83,10 +82,12 @@ void allocNewLine(int type, double posX, double posY, int drawType) {
 
     line[lines-1].x[0] = posX;
     line[lines-1].y[0] = posY;
-        line[lines-1].lenght = 1;
-        snapIfPossible(posX, posY);
+    line[lines-1].lenght = 1;
     line[lines-1].type = type;
-    line[lines-1].lenght = drawType ? 1 : 2;
+    if(!drawType) {
+        snapIfPossible(posX, posY);
+        line[lines-1].lenght++;
+    }
 
     // 0 == nothing
     // 1 == line mode
@@ -158,6 +159,40 @@ void discardNewLine(void) {
 
     line = new;
     return;
+}
+
+void deleteLine(double posX, double posY) {
+    // snap to an previous line
+    for(int i = 0; i < drawableLines; i++) {
+        //if(line[i].lenght < 2) continue; // avoids bugged out lines
+        for(int j = 0; j < line[i].lenght-1; j++) {
+            // don't try to understand this, this is above my expertise
+            // just know that this works and don't touch it
+            const double r = 10*zoom;
+            double m = (line[i].y[j+1]-line[i].y[j])/(line[i].x[j+1]-line[i].x[j]);
+            double c = line[i].y[j]-m*line[i].x[j];
+            double a_ = pow(m,2)+1;
+            double b_ = -(2*(posX-m*c+m*posY));
+            double c_ = (pow(posX,2)+pow(posY,2)-pow(r,2)+pow(c,2)-2*c*posY);
+            double discriminant = pow(b_, 2) - 4*a_*c_;
+            if(discriminant>0) {
+				// cool maffs huh?
+                if(((-b_+sqrt(discriminant))/(2*a_) >= fmin(line[i].x[j], line[i].x[j+1])
+				&& (-b_+sqrt(discriminant))/(2*a_) <= fmax(line[i].x[j], line[i].x[j+1])) || 
+				((-b_-sqrt(discriminant))/(2*a_) >= fmin(line[i].x[j], line[i].x[j+1]) && 
+				(-b_-sqrt(discriminant))/(2*a_) <= fmax(line[i].x[j], line[i].x[j+1]))) {
+                    // free memory from redos
+                    while(lines > drawableLines)
+                        discardNewLine();
+                    free(line[i].x);
+                    free(line[i].y);
+                    lines--;
+                    drawableLines--;
+                    memmove(&line[i], &line[i+1], sizeof(line1)*(drawableLines-i));
+                }
+            }
+        }
+    }
 }
 
 void deleteAllLines(void) {
@@ -498,11 +533,12 @@ int editorInput(void) {
 					} 
 					lastX = mouseCorX;
 					lastY = mouseCorY;
-                } else if(!mouseButton&&lineStatus==1) { 
+                } else if(!mouseButton&&lineStatus==1)
                     snapIfPossible((mouseCorX - tempVarX/2 - x/zoom)*zoom, (mouseCorY - tempVarY/2 - y/zoom)*zoom);
-                } else if(mouseButton&&lineStatus==2)
+                else if(mouseButton&&lineStatus==2)
                     addPointToNewDraw((mouseCorX - tempVarX/2 - x/zoom)*zoom, (mouseCorY - tempVarY/2 - y/zoom)*zoom);
-
+                else if(mouseButton&&lineType==127)
+                    deleteLine((mouseCorX - tempVarX/2 - x/zoom)*zoom, (mouseCorY - tempVarY/2 - y/zoom)*zoom);
                 SDL_FlushEvent(SDL_MOUSEMOTION);
                 break;
             }
@@ -523,7 +559,7 @@ int editorInput(void) {
                         lineType = 0;
                     else
                         lineType = (mouseCorX-1)/40+1;
-                else if(mouseCorY <= 40 && mouseCorX >= tempVarX - 40)
+                else if(mouseCorY <= 40 && mouseCorX    >= tempVarX - 40)
                     deleteAllLines();
                 else if(mouseCorY <= 80 && mouseCorX >= tempVarX - 40) {
                     promptBeforeExit();
@@ -532,50 +568,42 @@ int editorInput(void) {
                     redo();
                 else if(mouseCorY <= 40 && mouseCorX >= tempVarX - 160 && mouseCorX < tempVarX - 120)
                     undo();
-                else if(mouseCorY >= tempVarY - 40){
-                    switch((mouseCorX-1)/40)
-                    {
-                        case 0:    // load file
-                        {
-                            char *new;
-                            if(filename != NULL)
-                                    new = (char*)tinyfd_openFileDialog(textLine[14], filename, NUM_OF_FILE_TYPES, FILE_TYPES, textLine[15], 0);
-                            else    new = (char*)tinyfd_openFileDialog(textLine[14], NULL, NUM_OF_FILE_TYPES, FILE_TYPES, textLine[15], 0);
+                else if(mouseCorY <= 40 && mouseCorX >= tempVarX - 240 && mouseCorX < tempVarX - 200)
+                    lineType = 127;
+                else if(mouseCorY >= 40 && mouseCorY < 80 && mouseCorX < 40)
+                    snap = !snap;
+                else if(mouseCorY >= 40 && mouseCorY < 80 && mouseCorX >= 40 && mouseCorX < 80)
+                    grid = !grid;
+                else if((mouseCorY >= tempVarY-40)&&(mouseCorX<40)){
+                    // load file
+                    char *new;
+                    if(filename != NULL)
+                        new = (char*)tinyfd_openFileDialog(textLine[14], filename, NUM_OF_FILE_TYPES, FILE_TYPES, textLine[15], 0);
+                    else    new = (char*)tinyfd_openFileDialog(textLine[14], NULL, NUM_OF_FILE_TYPES, FILE_TYPES, textLine[15], 0);
 
-                            // handle cancel
-                            if(new == NULL) break;
-                            filename = new;
-                            cleanEditor();
-                            initEditor(0);
+                    // handle cancel
+                    if(new == NULL) break;
+                    filename = new;
+                    cleanEditor();
+                    initEditor(0);
 
-                            if(loadEditorFile(filename, 0)) tinyfd_messageBox(textLine[16], textLine[17], "ok", "error", 1);
-                            break;
-                        }
-                        case 1:    // save file
-                        {
-                            char *new;
-                            if(filename != NULL)
-                                    new = (char*)tinyfd_saveFileDialog(textLine[13], filename, NUM_OF_FILE_TYPES, FILE_TYPES, textLine[15]);
-                            else    new = (char*)tinyfd_saveFileDialog(textLine[13], "Untitled.sketch", NUM_OF_FILE_TYPES, FILE_TYPES, textLine[15]);
+                    if(loadEditorFile(filename, 0)) tinyfd_messageBox(textLine[16], textLine[17], "ok", "error", 1);
+                } else if((mouseCorY >= tempVarY-40)&&(mouseCorX<80)){
+                    char *new;
+                    if(filename != NULL)
+                        new = (char*)tinyfd_saveFileDialog(textLine[13], filename, NUM_OF_FILE_TYPES, FILE_TYPES, textLine[15]);
+                    else    new = (char*)tinyfd_saveFileDialog(textLine[13], "Untitled.sketch", NUM_OF_FILE_TYPES, FILE_TYPES, textLine[15]);
 
-                            // handle cancel
-                            if(new == NULL) break;
-                            filename = new;
-                            if(saveEditorFile(filename)) tinyfd_messageBox(textLine[16], textLine[17], "ok", "error", 1);
-                            break;
-                        }
-                        default:
-                            break;
-                    }
-                }else if(lineType&&lineType!=5){
-                    allocNewLine(lineType,
+                    // handle cancel
+                    if(new == NULL) break;
+                    filename = new;
+                    if(saveEditorFile(filename)) tinyfd_messageBox(textLine[16], textLine[17], "ok", "error", 1);
+                }else if(lineType){
+                    if(lineType==127){
+                        deleteLine((mouseCorX - tempVarX/2 - x/zoom)*zoom, (mouseCorY - tempVarY/2 - y/zoom)*zoom);
+                    } else allocNewLine(lineType,
                                  (mouseCorX - tempVarX/2 - x/zoom)*zoom,
-                                 (mouseCorY - tempVarY/2 - y/zoom)*zoom, 0);
-                    mouseButton = true;
-                }else if(lineType==5){
-                    allocNewLine(lineType,
-                                 (mouseCorX - tempVarX/2 - x/zoom)*zoom,
-                                 (mouseCorY - tempVarY/2 - y/zoom)*zoom, 1);
+                                 (mouseCorY - tempVarY/2 - y/zoom)*zoom, lineType==5 ? 1 : 0);
                     mouseButton = true;
                 }else if(lineStatus==1){
                     lineStatus = 0;
@@ -696,6 +724,9 @@ void drawEditor() {
     SDL_RenderCopy(render, buttonTexture, &(SDL_Rect){140, drawableLines > 0 ? 0 : 20, 20, 20}, &(SDL_Rect){tempVarX/2-80, 0, 20, 20});         // back button
     SDL_RenderCopyEx(render, buttonTexture, &(SDL_Rect){140, lines == drawableLines ? 20 : 0, 20, 20}, &(SDL_Rect){tempVarX/2-60, 0, 20, 20},   // redo button
                      0, NULL, SDL_FLIP_HORIZONTAL);
+    SDL_RenderCopy(render, buttonTexture, &(SDL_Rect){200, lineType == 127 ? 20 : 0, 20, 20}, &(SDL_Rect){tempVarX/2-120, 0, 20, 20});          // delete button
+    SDL_RenderCopy(render, buttonTexture, &(SDL_Rect){220, snap ? 20 : 0, 20, 20}, &(SDL_Rect){0, 20, 20, 20});                                 // snap button
+    SDL_RenderCopy(render, buttonTexture, &(SDL_Rect){240, grid ? 20 : 0, 20, 20}, &(SDL_Rect){20, 20, 20, 20});                                // grid button
 
     // In the bottom right draw the position
     SDL_RenderSetScale(render, 1.0, 1.0);
