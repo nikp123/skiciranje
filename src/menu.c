@@ -6,11 +6,11 @@ SDL_Surface *title, *information;
 int initMenu() {
     title = TTF_RenderUTF8_Blended(titleFont, textLine[1], translate_color(TITLE_FONT_COLOR));
     information = TTF_RenderUTF8_Blended(detailFont, textLine[6], translate_color(DETAIL_FONT_COLOR));
-    editorButton = TTF_RenderText_Blended(menuFont, textLine[2], translate_color(MENU_FONT_COLOR));
-    loadButton = TTF_RenderText_Blended(menuFont, textLine[18], translate_color(MENU_FONT_COLOR));
-    tutorialButton = TTF_RenderText_Blended(menuFont, textLine[3], translate_color(MENU_FONT_COLOR));
-    aboutButton = TTF_RenderText_Blended(menuFont, textLine[4], translate_color(MENU_FONT_COLOR));
-    exitButton = TTF_RenderText_Blended(menuFont, textLine[5], translate_color(MENU_FONT_COLOR));
+    editorButton = TTF_RenderUTF8_Blended(menuFont, textLine[2], translate_color(MENU_FONT_COLOR));
+    loadButton = TTF_RenderUTF8_Blended(menuFont, textLine[18], translate_color(MENU_FONT_COLOR));
+    tutorialButton = TTF_RenderUTF8_Blended(menuFont, textLine[3], translate_color(MENU_FONT_COLOR));
+    aboutButton = TTF_RenderUTF8_Blended(menuFont, textLine[4], translate_color(MENU_FONT_COLOR));
+    exitButton = TTF_RenderUTF8_Blended(menuFont, textLine[5], translate_color(MENU_FONT_COLOR));
 
     if(title==NULL||information==NULL||editorButton==NULL||loadButton==NULL||tutorialButton==NULL||aboutButton==NULL||exitButton==NULL) {
         SDL_Log("Some of the texts failed to generate: %s\n", TTF_GetError());
