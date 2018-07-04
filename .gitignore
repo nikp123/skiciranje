@@ -1,12 +1,1 @@
-*.dll
-*.exe
-executable
-*.config
-*.creator
-*.files
-*.includes
-*.creator.user
-bin/
-src/.*.swp
-src/*.swp
-
+build/

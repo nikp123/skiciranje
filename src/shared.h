@@ -38,7 +38,7 @@ extern const int NUM_OF_FILE_TYPES;
 #include <SDL2/SDL_ttf.h>
 
 // Deal with local libraries
-#include "tinyfiledialogs.h"
+#include "../libs/tinyfiledialogs/tinyfiledialogs.h"
 
 extern int argumentCount;
 extern char **arguments;
