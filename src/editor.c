@@ -160,7 +160,14 @@ void deleteLine(double posX, double posY) {
                     free(line[i].y);
                     lines--;
                     drawableLines--;
-                    memmove(&line[i], &line[i+1], sizeof(line1)*(drawableLines-i));
+					
+					// dumb but safe way to approach this
+					for(int l = i; l < drawableLines; l++) {
+						line[l].x = line[l+1].x;
+						line[l].y = line[l+1].y;
+						line[l].lenght = line[l+1].lenght;
+						line[l].type = line[l+1].type;
+					} 
                 }
             }
         }
