@@ -36,6 +36,7 @@ extern const int NUM_OF_FILE_TYPES;
 // non-standard libraries
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
+#include <SDL2/SDL2_gfxPrimitives.h>
 
 // Deal with local libraries
 #include "../libs/tinyfiledialogs/tinyfiledialogs.h"
@@ -52,3 +53,6 @@ extern SDL_Surface *swin;
 extern SDL_Renderer *render;
 extern TTF_Font *titleFont, *menuFont, *optionFont, *detailFont;
 extern SDL_Event event;
+
+// some cool functions
+double distance2d(double deltaX, double deltaY);

@@ -1,4 +1,5 @@
 ﻿#include "editor.h"
+#include "snap.h"
 
 int lines, drawableLines;
 int special, grid, snap;
@@ -8,13 +9,6 @@ SDL_Surface *positionSurface = NULL;
 SDL_Texture *positionTexture = NULL, *buttonTexture;
 char *positionString, mouseButton = false, lineType = 0, lineStatus = 0;
 char *filename;
-
-typedef struct {
-    Uint32 type;
-    Uint32 lenght;
-    double *x;
-    double *y;
-} line1;
 
 line1 *line;
 
@@ -26,28 +20,6 @@ void redo(void) {
 void undo(void) {
     if(drawableLines != 0) drawableLines--;
     return;
-}
-
-void snapIfPossible(double posX, double posY) {
-    if(snap){
-        // snap to grid
-        if(grid){
-            if(fabs(fmod(posX, cuts)) < cuts/4) posX = round(posX/cuts)*cuts;
-            if(fabs(fmod(posY, cuts)) < cuts/4) posY = round(posY/cuts)*cuts;
-        }
-
-        // snap to an previous line
-        for(int i = 0; i < lines-1; i++) {
-        for(int j = 0; j < line[i].lenght; j++) {
-            if(sqrt(pow(line[i].x[j]-posX, 2)+pow(line[i].y[j] - posY, 2)) < cuts/4) {
-                posX = line[i].x[j];
-                posY = line[i].y[j];
-            }
-        }}
-    }
-    // replace the original value
-    line[lines-1].x[line[lines-1].lenght-1] = posX;
-    line[lines-1].y[line[lines-1].lenght-1] = posY;
 }
 
 void allocNewLine(int type, double posX, double posY, int drawType) {
@@ -85,7 +57,7 @@ void allocNewLine(int type, double posX, double posY, int drawType) {
     line[lines-1].lenght = 1;
     line[lines-1].type = type;
     if(!drawType) {
-        snapIfPossible(posX, posY);
+		snapIfPossible(posX, posY, cuts, line, lines, snap, grid);
         line[lines-1].lenght++;
     }
 
@@ -288,7 +260,7 @@ int loadEditorFile(char *filename, int level) {
 
 void drawPosition(void) {
     if(positionTexture != NULL) SDL_DestroyTexture(positionTexture);
-    sprintf(positionString, "%sx=%.2f y=%.2f, %s%.2f\\0", textLine[11], x, y, textLine[12], zoom);
+    sprintf(positionString, "%sx=%.2f y=%.2f, %s%.2f*10^%d", textLine[11], x, y, textLine[12], zoom/powf(10.0, floor(log10(zoom))), (int)floor(log10(zoom)));
     positionSurface = TTF_RenderUTF8_Blended(detailFont, positionString, translate_color(DETAIL_FONT_COLOR));
     positionTexture = SDL_CreateTextureFromSurface(render, positionSurface);
     SDL_FreeSurface(positionSurface);
@@ -360,16 +332,8 @@ void drawNormalLine(int type, int x1, int y1, int x2, int y2, Uint32 color) {
             SDL_RenderDrawLine(render, x1, y1, x2, y2);
             break;
         case 2:
-            if(abs(x1-x2) > abs(y1-y2)){
-                SDL_RenderDrawLine(render, x1, y1-1, x2, y2-1);
-                SDL_RenderDrawLine(render, x1, y1, x2, y2);
-                SDL_RenderDrawLine(render, x1, y1+1, x2, y2+1);
-            } else if(abs(x1-x2) < abs(y1-y2)){
-                SDL_RenderDrawLine(render, x1-1, y1, x2-1, y2);
-                SDL_RenderDrawLine(render, x1, y1, x2, y2);
-                SDL_RenderDrawLine(render, x1+1, y1, x2+1, y2);
-            }
-            break;
+			thickLineColor(render, x1, y1, x2, y2, 3, color);
+			break;
         case 3:
         {
             float xRatio = (x2-x1)/floor(sqrt(pow(x2-x1, 2)+pow(y2-y1, 2)));
@@ -534,7 +498,7 @@ int editorInput(void) {
 					lastX = mouseCorX;
 					lastY = mouseCorY;
                 } else if(!mouseButton&&lineStatus==1)
-                    snapIfPossible((mouseCorX - tempVarX/2 - x/zoom)*zoom, (mouseCorY - tempVarY/2 - y/zoom)*zoom);
+					snapIfPossible((mouseCorX - tempVarX/2 - x/zoom)*zoom, (mouseCorY - tempVarY/2 - y/zoom)*zoom, cuts, line, lines, snap, grid);
                 else if(mouseButton&&lineStatus==2)
                     addPointToNewDraw((mouseCorX - tempVarX/2 - x/zoom)*zoom, (mouseCorY - tempVarY/2 - y/zoom)*zoom);
                 else if(mouseButton&&lineType==127)

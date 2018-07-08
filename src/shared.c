@@ -19,3 +19,8 @@ int glow;
 // handle file types
 const char *FILE_TYPES[] = {"*.sketch"};
 const int NUM_OF_FILE_TYPES = 1;
+
+// some abstracted functions so I don't repeat the same code 100 times
+double distance2d(double deltaX, double deltaY) {
+	return sqrt(deltaX*deltaX+deltaY*deltaY);
+}
