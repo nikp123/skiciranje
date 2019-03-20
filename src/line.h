@@ -3,9 +3,9 @@
 #ifndef H_LINE
 #define H_LINE
 typedef struct {
-    Uint32 type;
-    Uint32 lenght;
-    double *x;
-    double *y;
+	Uint32 type;
+	Uint32 lenght;
+	double *x;
+	double *y;
 } line1;
 #endif
