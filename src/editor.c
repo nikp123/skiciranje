@@ -32,6 +32,7 @@ void allocNewLine(int type, double posX, double posY, int drawType) {
 	lines++;
 	drawableLines++;
 
+
 	new = realloc(line, (lines+1)*sizeof(line1));
 	if(new == NULL) {
 		tinyfd_messageBox(textLine[20], textLine[19], "ok", "error", 1);
@@ -451,9 +452,11 @@ int editorInput(void) {
 				switch(event.key.keysym.sym)
 				{
 					case SDLK_ESCAPE:
-						promptBeforeExit();
-						SDL_FlushEvent(SDL_KEYDOWN);
-						return 1;
+						//promptBeforeExit();
+						//SDL_FlushEvent(SDL_KEYDOWN);
+						//return 1;
+						lineType = 0;
+						break;
 					case SDLK_LEFT:
 						x += zoom/0.1;
 						break;
@@ -487,6 +490,21 @@ int editorInput(void) {
 						break;
 					case SDLK_c:
 						redo();
+						break;
+					case SDLK_1:
+						lineType = 1;
+						break;
+					case SDLK_2:
+						lineType = 2;
+						break;
+					case SDLK_3:
+						lineType = 3;
+						break;
+					case SDLK_4:
+						lineType = 4;
+						break;
+					case SDLK_5:
+						lineType = 5;
 						break;
 				}
 				drawPosition();
