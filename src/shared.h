@@ -41,6 +41,10 @@ extern const int NUM_OF_FILE_TYPES;
 // Deal with local libraries
 #include "../libs/tinyfiledialogs/tinyfiledialogs.h"
 
+#define cut8(a, b) ({ (a>>b)&0xFF })
+#define max(a, b) ({ (a>b) ? a : b; })
+#define min(a, b) ({ (a<b) ? a : b; })
+
 extern int argumentCount;
 extern char **arguments;
 

@@ -142,6 +142,28 @@ void deleteLine(double posX, double posY) {
 			// don't try to understand this, this is above my expertise
 			// just know that this works and don't touch it
 			const double r = 10*zoom;
+			if(line[i].x[j+1]-line[i].x[j] == 0.0) {
+				// check if line is in range
+				if(posX-r<line[i].x[j]&&line[i].x[j]<posX+r) {
+					if(max(line[i].y[j+1], line[i].y[j]) > posY-r&&posY+r>min(line[i].y[j+1], line[i].x[j]))	{
+						// free memory from redos
+						while(lines > drawableLines)
+							discardNewLine();
+						free(line[i].x);
+						free(line[i].y);
+						lines--;
+						drawableLines--;
+
+						// dumb but safe way to approach this
+						for(int l = i; l < drawableLines; l++) {
+							line[l].x = line[l+1].x;
+							line[l].y = line[l+1].y;
+							line[l].lenght = line[l+1].lenght;
+							line[l].type = line[l+1].type;
+						}
+					}
+				}
+			}
 			double m = (line[i].y[j+1]-line[i].y[j])/(line[i].x[j+1]-line[i].x[j]);
 			double c = line[i].y[j]-m*line[i].x[j];
 			double a_ = pow(m,2)+1;
@@ -269,7 +291,7 @@ int loadEditorFile(char *filename, int level) {
 void drawPosition(void) {
 	if(positionTexture != NULL) SDL_DestroyTexture(positionTexture);
 	sprintf(positionString, "%sx=%.2f y=%.2f, %s%.2f*10^%d", textLine[11], x, y, textLine[12], zoom/powf(10.0, floor(log10(zoom))), (int)floor(log10(zoom)));
-	positionSurface = TTF_RenderUTF8_Blended(detailFont, positionString, translate_color(DETAIL_FONT_COLOR));
+	positionSurface = TTF_RenderUTF8_Blended(detailFont, positionString, translate_color(TITLE_FONT_COLOR));
 	positionTexture = SDL_CreateTextureFromSurface(render, positionSurface);
 	SDL_FreeSurface(positionSurface);
 	return;
@@ -455,7 +477,9 @@ int editorInput(void) {
 						//promptBeforeExit();
 						//SDL_FlushEvent(SDL_KEYDOWN);
 						//return 1;
+						discardNewLine();
 						lineType = 0;
+						lineStatus = 0;
 						break;
 					case SDLK_LEFT:
 						x += zoom/0.1;
