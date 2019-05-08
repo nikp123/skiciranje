@@ -23,7 +23,7 @@ if(NOT MATH_LIB)
 endif()
 
 add_executable(
-	skiciranje
+	skiciranje WIN32
 	src/clean.c
 	src/editor.c
 	src/functions.c

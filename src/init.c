@@ -41,7 +41,7 @@ int gameInit(int argc, char *argv[])
 	SDL_UpdateWindowSurface(win);
 
 	// Stage 2, get configuration to work
-	if(loadLanguage("default")) return 1;
+	if(loadLanguage("sr_RS.UTF-8")) return 1;
 
 	// loading fonts
 	titleFont = TTF_OpenFont("assets/fonts/Matamata-Bold.ttf", 32);

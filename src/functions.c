@@ -55,7 +55,9 @@ int loadLanguage(char *language) {
 		strcpy(textLine[i], tempString);
 
 		// NULL-termintate strings to avoid fucking memory corruptions
-		textLine[i][strlen(tempString)] = '\0';
+        if(textLine[i][strlen(tempString)-1] == 0x0a) 
+            textLine[i][strlen(tempString)-1] = '\0';
+        else textLine[i][strlen(tempString)] = '\0';
 	}
 
 	free(tempString);
