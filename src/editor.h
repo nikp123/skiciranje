@@ -2,7 +2,7 @@
 #include "functions.h"
 #include "line.h"
 
-int lines, drawableLines;
+Uint32 lines, drawableLines;
 int special, grid, snap;
 int lastX, lastY;
 double zoom, x, y, cuts;

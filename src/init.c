@@ -44,9 +44,9 @@ int gameInit(int argc, char *argv[])
 	if(loadLanguage("sr_RS.UTF-8")) return 1;
 
 	// loading fonts
-	titleFont = TTF_OpenFont("assets/fonts/Matamata-Bold.ttf", 32);
+	titleFont = TTF_OpenFont("assets/fonts/FantasqueSansMono-Bold.ttf", 32);
 	if(titleFont == NULL) {
-		SDL_Log("Cannot open font %s, reason: %s\n", "assets/fonts/Matamata-Bold.ttf", TTF_GetError());
+		SDL_Log("Cannot open font %s, reason: %s\n", "assets/fonts/FantasqueSansMono-Bold.ttf", TTF_GetError());
 		return 1;
 	}
 
@@ -63,19 +63,19 @@ int gameInit(int argc, char *argv[])
 
 
 	// loading fonts
-	menuFont = TTF_OpenFont("assets/fonts/Matamata-Bold.ttf", 28);
+	menuFont = TTF_OpenFont("assets/fonts/FantasqueSansMono-Bold.ttf", 28);
 	if(titleFont == NULL) {
-		SDL_Log("Cannot open font %s, reason: %s\n", "assets/fonts/Matamata-Bold.ttf", TTF_GetError());
+		SDL_Log("Cannot open font %s, reason: %s\n", "assets/fonts/FantasqueSansMono-Bold.ttf", TTF_GetError());
 		return 1;
 	}
-	optionFont = TTF_OpenFont("assets/fonts/Matamata-Regular.ttf", 16);
+	optionFont = TTF_OpenFont("assets/fonts/FantasqueSansMono-Regular.ttf", 16);
 	if(titleFont == NULL) {
-		SDL_Log("Cannot open font %s, reason: %s\n", "assets/fonts/Matamata-Regular.ttf", TTF_GetError());
+		SDL_Log("Cannot open font %s, reason: %s\n", "assets/fonts/FantasqueSansMono-Regular.ttf", TTF_GetError());
 		return 1;
 	}
-	detailFont = TTF_OpenFont("assets/fonts/Matamata-Regular.ttf", 12);
+	detailFont = TTF_OpenFont("assets/fonts/FantasqueSansMono-Regular.ttf", 12);
 	if(titleFont == NULL) {
-		SDL_Log("Cannot open font %s, reason: %s\n", "assets/fonts/Matamata-Regular.ttf", TTF_GetError());
+		SDL_Log("Cannot open font %s, reason: %s\n", "assets/fonts/FantasqueSansMono-Regular.ttf", TTF_GetError());
 		return 1;
 	}
 

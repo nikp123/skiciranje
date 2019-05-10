@@ -1,7 +1,7 @@
 ﻿#include "editor.h"
 #include "snap.h"
 
-int lines, drawableLines;
+Uint32 lines, drawableLines;
 int special, grid, snap;
 int lastX, lastY;
 double zoom, x, y, cuts;
@@ -136,12 +136,15 @@ void discardNewLine(void) {
 
 void deleteLine(double posX, double posY) {
 	// snap to an previous line
-	for(int i = 0; i < drawableLines; i++) {
+	for(Uint32 i = 0; i < drawableLines; i++) {
 		//if(line[i].lenght < 2) continue; // avoids bugged out lines
-		for(int j = 0; j < line[i].lenght-1; j++) {
+		for(Uint32 j = 0; j < line[i].lenght-1; j++) {
 			// don't try to understand this, this is above my expertise
 			// just know that this works and don't touch it
 			const double r = 10*zoom;
+
+			// this is a special case where for vertical lines the function below doesnt work so this is a workaround,
+			// call it shitty, I don't care
 			if(line[i].x[j+1]-line[i].x[j] == 0.0) {
 				// check if line is in range
 				if(posX-r<line[i].x[j]&&line[i].x[j]<posX+r) {
@@ -155,7 +158,7 @@ void deleteLine(double posX, double posY) {
 						drawableLines--;
 
 						// dumb but safe way to approach this
-						for(int l = i; l < drawableLines; l++) {
+						for(Uint32 l = i; l < drawableLines; l++) {
 							line[l].x = line[l+1].x;
 							line[l].y = line[l+1].y;
 							line[l].lenght = line[l+1].lenght;
@@ -164,6 +167,7 @@ void deleteLine(double posX, double posY) {
 					}
 				}
 			}
+
 			double m = (line[i].y[j+1]-line[i].y[j])/(line[i].x[j+1]-line[i].x[j]);
 			double c = line[i].y[j]-m*line[i].x[j];
 			double a_ = pow(m,2)+1;
@@ -185,7 +189,7 @@ void deleteLine(double posX, double posY) {
 					drawableLines--;
 
 					// dumb but safe way to approach this
-					for(int l = i; l < drawableLines; l++) {
+					for(Uint32 l = i; l < drawableLines; l++) {
 						line[l].x = line[l+1].x;
 						line[l].y = line[l+1].y;
 						line[l].lenght = line[l+1].lenght;
@@ -199,7 +203,7 @@ void deleteLine(double posX, double posY) {
 
 void deleteAllLines(void) {
 	if(line != NULL) {
-		for(int i = 0; i < lines; i++) {
+		for(Uint32 i = 0; i < lines; i++) {
 			free(line[i].x);
 			free(line[i].y);
 		}
@@ -223,9 +227,9 @@ int saveEditorFile(char *filename) {
 	fprintf(file, "%d\n", lines);
 
 	// write individual lines
-	for(int i = 0; i < lines; i++){
+	for(Uint32 i = 0; i < lines; i++){
 		fprintf(file, "%d %d\n", line[i].type, line[i].lenght);
-		for(int j = 0; j < line[i].lenght; j++)
+		for(Uint32 j = 0; j < line[i].lenght; j++)
 			fprintf(file, "%lg %lg\n", line[i].x[j], line[i].y[j]);
 	}
 
@@ -256,7 +260,7 @@ int loadEditorFile(char *filename, int level) {
 	}
 
 	// reading and importing the whole thing
-	for(int doneLines = 0; doneLines < lines; doneLines++) {
+	for(Uint32 doneLines = 0; doneLines < lines; doneLines++) {
 		if(fscanf(file, "%d %d", &line[doneLines].type, &line[doneLines].lenght) != 2) {
 			tinyfd_messageBox(textLine[20], textLine[22], "ok", "error", 1);
 			SDL_Log("fscanf failed at: %d\n", __LINE__-2);
@@ -275,7 +279,7 @@ int loadEditorFile(char *filename, int level) {
 			return 1;
 		}
 
-		for(int i = 0; i < line[doneLines].lenght; i++) {
+		for(Uint32 i = 0; i < line[doneLines].lenght; i++) {
 			if(fscanf(file, "%lf %lf", &line[doneLines].x[i], &line[doneLines].y[i]) != 2) {
 				tinyfd_messageBox(textLine[20], textLine[22], "ok", "error", 1);
 				SDL_Log("fscanf failed at: %d\n", __LINE__-2);
@@ -290,7 +294,7 @@ int loadEditorFile(char *filename, int level) {
 
 void drawPosition(void) {
 	if(positionTexture != NULL) SDL_DestroyTexture(positionTexture);
-	sprintf(positionString, "%sx=%.2f y=%.2f, %s%.2f*10^%d", textLine[11], x, y, textLine[12], zoom/powf(10.0, floor(log10(zoom))), (int)floor(log10(zoom)));
+	sprintf(positionString, "%sx=%.2f y=%.2f, %s%.2f*10^%d", textLine[11], x, y, textLine[12], zoom/powf(10.0, floor(log10(zoom))), floor(log10(zoom)));
 	positionSurface = TTF_RenderUTF8_Blended(detailFont, positionString, translate_color(TITLE_FONT_COLOR));
 	positionTexture = SDL_CreateTextureFromSurface(render, positionSurface);
 	SDL_FreeSurface(positionSurface);
@@ -336,9 +340,9 @@ int initEditor(int level) {
 	}
 
 	// set the requred parameters
-	zoom = 0.1f;
-	x = 0.0f;
-	y = 0.0f;
+	zoom = 0.1;
+	x = 0.0;
+	y = 0.0;
 	cuts = 10;
 	grid = 1;
 	snap = 1;
@@ -348,13 +352,13 @@ int initEditor(int level) {
 	return 0;
 }
 
-void drawNormalLine(int type, int x1, int y1, int x2, int y2, Uint32 color) {
+void drawNormalLine(Uint32 type, int x1, int y1, int x2, int y2, Uint32 color) {
 	// get window size
-	int tempVarX, tempVarY;
-	SDL_GetWindowSize(win, &tempVarX, &tempVarY);
+	int mousePosX, mousePosY;
+	SDL_GetWindowSize(win, &mousePosX, &mousePosY);
 
 	// set draw color
-	SDL_SetRenderDrawColor(render, color >> 24 % 8, color >> 16 % 8, color >> 8 % 8, color % 8);
+	SDL_SetRenderDrawColor(render, r32(color), g32(color), b32(color), a32(color));
 
 	// draw line
 	switch(type) {
@@ -366,14 +370,14 @@ void drawNormalLine(int type, int x1, int y1, int x2, int y2, Uint32 color) {
 			break;
 		case 3:
 			{
-				float xRatio = (x2-x1)/floor(sqrt(pow(x2-x1, 2)+pow(y2-y1, 2)));
-				float yRatio = (y2-y1)/floor(sqrt(pow(x2-x1, 2)+pow(y2-y1, 2)));
-				float lineLen = sqrt(pow((x2-x1), 2)+pow((y2-y1), 2));
+				double xRatio = (x2-x1)/floor(sqrt(pow(x2-x1, 2)+pow(y2-y1, 2)));
+				double yRatio = (y2-y1)/floor(sqrt(pow(x2-x1, 2)+pow(y2-y1, 2)));
+				double lineLen = sqrt(pow((x2-x1), 2)+pow((y2-y1), 2));
 				for(int i = 0; i < floor(lineLen)-6; i += 12){
 					if(x1+i*xRatio < 0) continue;
 					if(y1+i*yRatio < 0) continue;
-					if(x1+i*xRatio > tempVarX) continue;
-					if(y1+i*yRatio > tempVarY) continue;
+					if(x1+i*xRatio > mousePosX) continue;
+					if(y1+i*yRatio > mousePosY) continue;
 
 					SDL_RenderDrawLine(render, x1+i*xRatio, y1+i*yRatio, x1+(i+5)*xRatio, y1+(i+5)*yRatio);
 				}
@@ -381,14 +385,14 @@ void drawNormalLine(int type, int x1, int y1, int x2, int y2, Uint32 color) {
 			}
 		case 4:
 			{
-				float xRatio = (x2-x1)/floor(sqrt(pow(x2-x1, 2)+pow(y2-y1, 2)));
-				float yRatio = (y2-y1)/floor(sqrt(pow(x2-x1, 2)+pow(y2-y1, 2)));
-				float lineLen = sqrt(pow((x2-x1), 2)+pow((y2-y1), 2));
+				double xRatio = (x2-x1)/floor(sqrt(pow(x2-x1, 2)+pow(y2-y1, 2)));
+				double yRatio = (y2-y1)/floor(sqrt(pow(x2-x1, 2)+pow(y2-y1, 2)));
+				double lineLen = sqrt(pow((x2-x1), 2)+pow((y2-y1), 2));
 				for(int i = 0; i < floor(lineLen)-6; i += 13){
 					if(x1+i*xRatio < 0) continue;
 					if(y1+i*yRatio < 0) continue;
-					if(x1+i*xRatio > tempVarX) continue;
-					if(y1+i*yRatio > tempVarY) continue;
+					if(x1+i*xRatio > mousePosX) continue;
+					if(y1+i*yRatio > mousePosY) continue;
 
 					SDL_RenderDrawLine(render, x1+i*xRatio, y1+i*yRatio, x1+(i+5)*xRatio, y1+(i+5)*yRatio);
 					SDL_RenderDrawPoint(render, x1+(i+9)*xRatio, y1+(i+9)*yRatio);
@@ -477,9 +481,9 @@ int editorInput(void) {
 						//promptBeforeExit();
 						//SDL_FlushEvent(SDL_KEYDOWN);
 						//return 1;
-						discardNewLine();
-						lineType = 0;
+						if(lineStatus == 1) discardNewLine();
 						lineStatus = 0;
+						lineType = 0;
 						break;
 					case SDLK_LEFT:
 						x += zoom/0.1;
@@ -535,9 +539,9 @@ int editorInput(void) {
 				break;
 			case SDL_MOUSEMOTION:
 				{
-					int mouseCorX = 0, mouseCorY = 0, tempVarX, tempVarY;
+					int mouseCorX = 0, mouseCorY = 0, screenSize[2];
 					SDL_GetMouseState(&mouseCorX, &mouseCorY);
-					SDL_GetWindowSize(win, &tempVarX, &tempVarY);
+					SDL_GetWindowSize(win, &screenSize[0], &screenSize[1]);
 
 					// make a scrollable surface
 					if(mouseButton&&!lineType) {
@@ -549,19 +553,19 @@ int editorInput(void) {
 						lastX = mouseCorX;
 						lastY = mouseCorY;
 					} else if(!mouseButton&&lineStatus==1)
-						snapIfPossible((mouseCorX - tempVarX/2 - x/zoom)*zoom, (mouseCorY - tempVarY/2 - y/zoom)*zoom, cuts, line, lines, snap, grid);
+						snapIfPossible((mouseCorX - screenSize[0]/2 - x/zoom)*zoom, (mouseCorY - screenSize[1]/2 - y/zoom)*zoom, cuts, line, lines, snap, grid);
 					else if(mouseButton&&lineStatus==2)
-						addPointToNewDraw((mouseCorX - tempVarX/2 - x/zoom)*zoom, (mouseCorY - tempVarY/2 - y/zoom)*zoom);
+						addPointToNewDraw((mouseCorX - screenSize[0]/2 - x/zoom)*zoom, (mouseCorY - screenSize[1]/2 - y/zoom)*zoom);
 					else if(mouseButton&&lineType==127)
-						deleteLine((mouseCorX - tempVarX/2 - x/zoom)*zoom, (mouseCorY - tempVarY/2 - y/zoom)*zoom);
+						deleteLine((mouseCorX - screenSize[0]/2 - x/zoom)*zoom, (mouseCorY - screenSize[1]/2 - y/zoom)*zoom);
 					SDL_FlushEvent(SDL_MOUSEMOTION);
 					break;
 				}
 			case SDL_MOUSEBUTTONDOWN:
 				{
-					int mouseCorX = 0, mouseCorY = 0, tempVarX, tempVarY;
+					int mouseCorX = 0, mouseCorY = 0, screenSize[2];
 					SDL_GetMouseState(&mouseCorX, &mouseCorY);
-					SDL_GetWindowSize(win, &tempVarX, &tempVarY);
+					SDL_GetWindowSize(win, &screenSize[0], &screenSize[1]);
 
 
 					// Line type selection
@@ -574,22 +578,22 @@ int editorInput(void) {
 							lineType = 0;
 						else
 							lineType = (mouseCorX-1)/40+1;
-					else if(mouseCorY <= 40 && mouseCorX    >= tempVarX - 40)
+					else if(mouseCorY <= 40 && mouseCorX    >= screenSize[0] - 40)
 						deleteAllLines();
-					else if(mouseCorY <= 80 && mouseCorX >= tempVarX - 40) {
+					else if(mouseCorY <= 80 && mouseCorX >= screenSize[0] - 40) {
 						promptBeforeExit();
 						return 1;
-					} else if(mouseCorY <= 40 && mouseCorX >= tempVarX - 120 && mouseCorX < tempVarX - 80)
+					} else if(mouseCorY <= 40 && mouseCorX >= screenSize[0] - 120 && mouseCorX < screenSize[0] - 80)
 						redo();
-					else if(mouseCorY <= 40 && mouseCorX >= tempVarX - 160 && mouseCorX < tempVarX - 120)
+					else if(mouseCorY <= 40 && mouseCorX >= screenSize[0] - 160 && mouseCorX < screenSize[0] - 120)
 						undo();
-					else if(mouseCorY <= 40 && mouseCorX >= tempVarX - 240 && mouseCorX < tempVarX - 200)
+					else if(mouseCorY <= 40 && mouseCorX >= screenSize[0] - 240 && mouseCorX < screenSize[0] - 200)
 						lineType = 127;
 					else if(mouseCorY >= 40 && mouseCorY < 80 && mouseCorX < 40)
 						snap = !snap;
 					else if(mouseCorY >= 40 && mouseCorY < 80 && mouseCorX >= 40 && mouseCorX < 80)
 						grid = !grid;
-					else if((mouseCorY >= tempVarY-40)&&(mouseCorX<40)){
+					else if((mouseCorY >= screenSize[1]-40)&&(mouseCorX<40)){
 						// load file
 						char *new;
 						if(filename != NULL)
@@ -603,7 +607,7 @@ int editorInput(void) {
 						initEditor(0);
 
 						if(loadEditorFile(filename, 0)) tinyfd_messageBox(textLine[16], textLine[17], "ok", "error", 1);
-					} else if((mouseCorY >= tempVarY-40)&&(mouseCorX<80)){
+					} else if((mouseCorY >= screenSize[1]-40)&&(mouseCorX<80)){
 						char *new;
 						if(filename != NULL)
 							new = (char*)tinyfd_saveFileDialog(textLine[13], filename, NUM_OF_FILE_TYPES, FILE_TYPES, textLine[15]);
@@ -615,15 +619,15 @@ int editorInput(void) {
 						if(saveEditorFile(filename)) tinyfd_messageBox(textLine[16], textLine[17], "ok", "error", 1);
 					}else if(lineType){
 						if(lineType==127){
-							deleteLine((mouseCorX - tempVarX/2 - x/zoom)*zoom, (mouseCorY - tempVarY/2 - y/zoom)*zoom);
+							deleteLine((mouseCorX - screenSize[0]/2 - x/zoom)*zoom, (mouseCorY - screenSize[1]/2 - y/zoom)*zoom);
 						} else allocNewLine(lineType,
-								(mouseCorX - tempVarX/2 - x/zoom)*zoom,
-								(mouseCorY - tempVarY/2 - y/zoom)*zoom, lineType==5 ? 1 : 0);
+								(mouseCorX - screenSize[0]/2 - x/zoom)*zoom,
+								(mouseCorY - screenSize[1]/2 - y/zoom)*zoom, lineType==5 ? 1 : 0);
 						mouseButton = true;
 					}else if(lineStatus==1){
 						lineStatus = 0;
-						line[lines-1].x[1] = (mouseCorX - tempVarX/2 - x/zoom)*zoom;
-						line[lines-1].y[1] = (mouseCorY - tempVarY/2 - y/zoom)*zoom;
+						line[lines-1].x[1] = (mouseCorX - screenSize[0]/2 - x/zoom)*zoom;
+						line[lines-1].y[1] = (mouseCorY - screenSize[1]/2 - y/zoom)*zoom;
 					} mouseButton = true;
 					break;
 				}
@@ -666,8 +670,8 @@ void drawEditor() {
 	SDL_RenderClear(render);
 
 	// get window size
-	int tempVarX, tempVarY, tempVarW, tempVarH;
-	SDL_GetWindowSize(win, &tempVarX, &tempVarY);
+	int screenSize[2], textureSize[2];
+	SDL_GetWindowSize(win, &screenSize[0], &screenSize[1]);
 
 	// additional variables
 	SDL_Rect rect;
@@ -677,51 +681,55 @@ void drawEditor() {
 	if(grid){
 		// X axis
 		int counter = 0;
-		int tempVar = tempVarX/2 + (int)((double)x/zoom);
+		int tempVar = screenSize[0]/2 + (int)((double)x/zoom);
 		double cutSize = cuts/zoom;
-		while(tempVar < tempVarX) {
-			drawNormalLine(1, tempVar, 0, tempVar, tempVarY, DETAIL_FONT_COLOR);
+		while(tempVar < screenSize[0]) {
+			drawNormalLine(1, tempVar, 0, tempVar, screenSize[1], DETAIL_FONT_COLOR);
 			counter++;
-			tempVar = tempVarX/2 + x/zoom + cutSize*counter;
+			tempVar = screenSize[0]/2 + x/zoom + cutSize*counter;
 		}
 		counter = 0;
-		tempVar = tempVarX/2 + (int)((double)x/(double)zoom);
+		tempVar = screenSize[0]/2 + (int)((double)x/(double)zoom);
 		while(tempVar > 0) {
-			drawNormalLine(1, tempVar, 0, tempVar, tempVarY, DETAIL_FONT_COLOR);
+			drawNormalLine(1, tempVar, 0, tempVar, screenSize[1], DETAIL_FONT_COLOR);
 			counter++;
-			tempVar = tempVarX/2 + x/zoom - cutSize*counter;
+			tempVar = screenSize[0]/2 + x/zoom - cutSize*counter;
 		}
 
 		// Y axis
 		counter = 0;
-		tempVar = tempVarY/2 + (int)((double)y/(double)zoom);
-		while(tempVar < tempVarY) {
-			drawNormalLine(1, 0, tempVar, tempVarX, tempVar, DETAIL_FONT_COLOR);
+		tempVar = screenSize[1]/2 + (int)((double)y/(double)zoom);
+		while(tempVar < screenSize[1]) {
+			drawNormalLine(1, 0, tempVar, screenSize[0], tempVar, DETAIL_FONT_COLOR);
 			counter++;
-			tempVar = tempVarY/2 + y/zoom + cutSize*counter;
+			tempVar = screenSize[1]/2 + y/zoom + cutSize*counter;
 		}
 		counter = 0;
-		tempVar = tempVarY/2 + (int)((double)y/(double)zoom);
+		tempVar = screenSize[1]/2 + (int)((double)y/(double)zoom);
 		while(tempVar > 0) {
-			drawNormalLine(1, 0, tempVar, tempVarX, tempVar, DETAIL_FONT_COLOR);
+			drawNormalLine(1, 0, tempVar, screenSize[0], tempVar, DETAIL_FONT_COLOR);
 			counter++;
-			tempVar = tempVarY/2 + y/zoom - cutSize*counter;
+			tempVar = screenSize[1]/2 + y/zoom - cutSize*counter;
 		}
 	}
 
 	// draw lines
-	for(int i = 0; i < drawableLines; i++) {
+	for(Uint32 i = 0; i < drawableLines; i++) {
 		int line_x[2], line_y[2];
 
-		for(int j = 0; j < line[i].lenght-1; j++){
+		for(Uint32 j = 0; j < line[i].lenght-1; j++){
 			// calculate the lines
-			line_x[0] = tempVarX/2 + (int)((double)x/zoom + (double)line[i].x[j]/zoom);
-			line_x[1] = tempVarX/2 + (int)((double)x/zoom + (double)line[i].x[j+1]/zoom);
-			line_y[0] = tempVarY/2 + (int)((double)y/zoom + (double)line[i].y[j]/zoom);
-			line_y[1] = tempVarY/2 + (int)((double)y/zoom + (double)line[i].y[j+1]/zoom);
+			line_x[0] = screenSize[0]/2 + (int)((double)x/zoom + (double)line[i].x[j]/zoom);
+			line_x[1] = screenSize[0]/2 + (int)((double)x/zoom + (double)line[i].x[j+1]/zoom);
+			line_y[0] = screenSize[1]/2 + (int)((double)y/zoom + (double)line[i].y[j]/zoom);
+			line_y[1] = screenSize[1]/2 + (int)((double)y/zoom + (double)line[i].y[j+1]/zoom);
 
-			// draw the line
-			drawNormalLine(line[i].type, line_x[0], line_y[0], line_x[1], line_y[1], TITLE_FONT_COLOR);
+			// draw the line, but first check if line is out of bounds
+            if(!((line_x[0]<0&&line_x[1]<0) ||
+                (line_y[0]<0&&line_y[1]<0) ||
+                (line_x[0]>screenSize[0]&&line_x[1]>screenSize[0]) ||
+                (line_y[0]>screenSize[1]&&line_y[1]>screenSize[1])))
+			    drawNormalLine(line[i].type, line_x[0], line_y[0], line_x[1], line_y[1], TITLE_FONT_COLOR);
 		}
 	}
 
@@ -733,27 +741,27 @@ void drawEditor() {
 	SDL_RenderCopy(render, buttonTexture, &(SDL_Rect){60, lineType == 4 ? 20 : 0,20,20}, &(SDL_Rect){60,0,20,20});  // line-dot-line button
 	SDL_RenderCopy(render, buttonTexture, &(SDL_Rect){80, lineType == 5 ? 20 : 0,20,20}, &(SDL_Rect){80,0,20,20});  // draw button
 
-	SDL_RenderCopy(render, buttonTexture, &(SDL_Rect){160, 0, 20, 20}, &(SDL_Rect){0, tempVarY/2-20, 20, 20});                                  // load button
-	SDL_RenderCopy(render, buttonTexture, &(SDL_Rect){120, 0, 20, 20}, &(SDL_Rect){20, tempVarY/2-20, 20, 20});                                 // save button
-	SDL_RenderCopy(render, buttonTexture, &(SDL_Rect){100, 0, 20, 20}, &(SDL_Rect){tempVarX/2-20, 0, 20, 20});                                  // delete all button
-	SDL_RenderCopy(render, buttonTexture, &(SDL_Rect){180, 0, 20, 20}, &(SDL_Rect){tempVarX/2-20, 20, 20, 20});                                 // menu
-	SDL_RenderCopy(render, buttonTexture, &(SDL_Rect){140, drawableLines > 0 ? 0 : 20, 20, 20}, &(SDL_Rect){tempVarX/2-80, 0, 20, 20});         // back button
-	SDL_RenderCopyEx(render, buttonTexture, &(SDL_Rect){140, lines == drawableLines ? 20 : 0, 20, 20}, &(SDL_Rect){tempVarX/2-60, 0, 20, 20},   // redo button
+	SDL_RenderCopy(render, buttonTexture, &(SDL_Rect){160, 0, 20, 20}, &(SDL_Rect){0, screenSize[1]/2-20, 20, 20});                                  // load button
+	SDL_RenderCopy(render, buttonTexture, &(SDL_Rect){120, 0, 20, 20}, &(SDL_Rect){20, screenSize[1]/2-20, 20, 20});                                 // save button
+	SDL_RenderCopy(render, buttonTexture, &(SDL_Rect){100, 0, 20, 20}, &(SDL_Rect){screenSize[0]/2-20, 0, 20, 20});                                  // delete all button
+	SDL_RenderCopy(render, buttonTexture, &(SDL_Rect){180, 0, 20, 20}, &(SDL_Rect){screenSize[0]/2-20, 20, 20, 20});                                 // menu
+	SDL_RenderCopy(render, buttonTexture, &(SDL_Rect){140, drawableLines > 0 ? 0 : 20, 20, 20}, &(SDL_Rect){screenSize[0]/2-80, 0, 20, 20});         // back button
+	SDL_RenderCopyEx(render, buttonTexture, &(SDL_Rect){140, lines == drawableLines ? 20 : 0, 20, 20}, &(SDL_Rect){screenSize[0]/2-60, 0, 20, 20},   // redo button
 			0, NULL, SDL_FLIP_HORIZONTAL);
-	SDL_RenderCopy(render, buttonTexture, &(SDL_Rect){200, lineType == 127 ? 20 : 0, 20, 20}, &(SDL_Rect){tempVarX/2-120, 0, 20, 20});          // delete button
+	SDL_RenderCopy(render, buttonTexture, &(SDL_Rect){200, lineType == 127 ? 20 : 0, 20, 20}, &(SDL_Rect){screenSize[0]/2-120, 0, 20, 20});          // delete button
 	SDL_RenderCopy(render, buttonTexture, &(SDL_Rect){220, snap ? 20 : 0, 20, 20}, &(SDL_Rect){0, 20, 20, 20});                                 // snap button
 	SDL_RenderCopy(render, buttonTexture, &(SDL_Rect){240, grid ? 20 : 0, 20, 20}, &(SDL_Rect){20, 20, 20, 20});                                // grid button
 
 	// In the bottom right draw the position
 	SDL_RenderSetScale(render, 1.0, 1.0);
-	SDL_QueryTexture(positionTexture, NULL, NULL, &tempVarW, &tempVarH);
-	rect.x = tempVarX - tempVarW - 10;
-	rect.y = tempVarY - tempVarH - 10;
-	rect.w = tempVarW + 10;
-	rect.h = tempVarH + 10;
-	SDL_SetRenderDrawColor(render, (Uint8)CLEAR_COLOR >> 24 % 8, (Uint8)CLEAR_COLOR >> 16 % 8, (Uint8)CLEAR_COLOR >> 8 % 8, (Uint8)CLEAR_COLOR % 8);
+	SDL_QueryTexture(positionTexture, NULL, NULL, &textureSize[0], &textureSize[1]);
+	rect.x = screenSize[0] - textureSize[0] - 10;
+	rect.y = screenSize[1] - textureSize[1] - 10;
+	rect.w = textureSize[0] + 10;
+	rect.h = textureSize[1] + 10;
+	SDL_SetRenderDrawColor(render, r32(CLEAR_COLOR), g32(CLEAR_COLOR), b32(CLEAR_COLOR), a32(CLEAR_COLOR));
 	SDL_RenderFillRect(render, &rect);
-	SDL_SetRenderDrawColor(render, TITLE_FONT_COLOR>>24%8, TITLE_FONT_COLOR>>16%8, TITLE_FONT_COLOR>>8%8, TITLE_FONT_COLOR%8);
+	SDL_SetRenderDrawColor(render, r32(TITLE_FONT_COLOR), g32(TITLE_FONT_COLOR), b32(TITLE_FONT_COLOR), a32(TITLE_FONT_COLOR));
 	SDL_RenderDrawRect(render, &rect);
 	rect.x+=5;
 	rect.y+=5;
@@ -799,7 +807,7 @@ int editor(int level)
 	int status = 0;
 
 	while(!status||status==3) {
-		int frameStart = SDL_GetTicks();
+		Uint32 frameStart = SDL_GetTicks();
 
 		if(!status)
 			drawEditor();
