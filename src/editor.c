@@ -1,16 +1,15 @@
 ﻿#include "editor.h"
 #include "snap.h"
 
-Uint32 lines, drawableLines;
-int special, grid, snap;
-int lastX, lastY;
-double zoom, x, y, cuts;
-SDL_Surface *positionSurface = NULL;
-SDL_Texture *positionTexture = NULL, *buttonTexture;
-char *positionString, mouseButton = false, lineType = 0, lineStatus = 0;
-char *filename;
-
-line1 *line;
+static Uint32 lines, drawableLines;
+static int special, grid, snap;
+static int lastX, lastY;
+static double zoom, x, y, cuts;
+static SDL_Surface *positionSurface = NULL;
+static SDL_Texture *positionTexture = NULL, *buttonTexture;
+static char *positionString, mouseButton = false, lineType = 0, lineStatus = 0;
+static char *filename;
+static line1 *line;
 
 void redo(void) {
 	if(drawableLines != lines) drawableLines++;
