@@ -21,7 +21,7 @@ void undo(void) {
 	return;
 }
 
-void allocNewLine(int type, double posX, double posY, int drawType) {
+void allocNewLine(Uint32 type, double posX, double posY, int drawType) {
 	line1 *new;
 
 	// free memory from redos
@@ -145,9 +145,9 @@ void deleteLine(double posX, double posY) {
 			// this is a special case where for vertical lines the function below doesnt work so this is a workaround,
 			// call it shitty, I don't care
 			if(line[i].x[j+1]-line[i].x[j] == 0.0) {
-				// check if line is in range
-				if(posX-r<line[i].x[j]&&line[i].x[j]<posX+r) {
-					if(max(line[i].y[j+1], line[i].y[j]) > posY-r&&posY+r>min(line[i].y[j+1], line[i].x[j]))	{
+				// check if line is in range of circle's perimiter
+				if(((posX-r)<line[i].x[j])&&(line[i].x[j]<(posX+r))) {
+					if((max(line[i].y[j+1], line[i].y[j]) > (posY-r))&&((posY+r)>min(line[i].y[j+1], line[i].y[j])))	{
 						// free memory from redos
 						while(lines > drawableLines)
 							discardNewLine();
@@ -176,8 +176,8 @@ void deleteLine(double posX, double posY) {
 			if(discriminant>0) {
 				// cool maffs huh?
 				if(((-b_+sqrt(discriminant))/(2*a_) >= fmin(line[i].x[j], line[i].x[j+1])
-							&& (-b_+sqrt(discriminant))/(2*a_) <= fmax(line[i].x[j], line[i].x[j+1])) || 
-						((-b_-sqrt(discriminant))/(2*a_) >= fmin(line[i].x[j], line[i].x[j+1]) && 
+							&& (-b_+sqrt(discriminant))/(2*a_) <= fmax(line[i].x[j], line[i].x[j+1])) ||
+						((-b_-sqrt(discriminant))/(2*a_) >= fmin(line[i].x[j], line[i].x[j+1]) &&
 						 (-b_-sqrt(discriminant))/(2*a_) <= fmax(line[i].x[j], line[i].x[j+1]))) {
 					// free memory from redos
 					while(lines > drawableLines)
@@ -767,6 +767,20 @@ void drawEditor() {
 	rect.w-=10;
 	rect.h-=10;
 	SDL_RenderCopy(render, positionTexture, NULL, &rect);
+
+        int mousePos[2];
+        SDL_GetMouseState(&mousePos[0], &mousePos[1]);
+
+		if(isSnappable((mousePos[0]-screenSize[0]/2-x/zoom)*zoom, (mousePos[1]-screenSize[1]/2-y/zoom)*zoom, \
+					   cuts, line, lines, snap, grid)) {
+
+		    rect.x = mousePos[0] - 5;
+	        rect.y = mousePos[1] - 5;
+        	rect.w = 10;
+	        rect.h = 10;
+	        SDL_SetRenderDrawColor(render, r32(TITLE_FONT_COLOR), g32(TITLE_FONT_COLOR), b32(TITLE_FONT_COLOR), a32(TITLE_FONT_COLOR));
+	        SDL_RenderFillRect(render, &rect);
+		}
 
 	// update frame
 	SDL_RenderPresent(render);
