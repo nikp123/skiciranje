@@ -60,3 +60,5 @@ extern SDL_Event event;
 
 // some cool functions
 double distance2d(double deltaX, double deltaY);
+float infinity(void);
+double cmod(double a, double b);

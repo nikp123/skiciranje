@@ -24,3 +24,17 @@ const int NUM_OF_FILE_TYPES = 1;
 double distance2d(double deltaX, double deltaY) {
 	return sqrt(deltaX*deltaX+deltaY*deltaY);
 }
+
+float infinity(void) {
+	int inf = 0x7F800000;
+    return *(float*)&inf;
+}
+
+double cmod(double a, double b) {
+	// performs a modulo to the closest
+	double c=fmod(a, b);
+	if(c<(b-c))
+		return c;
+	else
+		return b-c;
+}

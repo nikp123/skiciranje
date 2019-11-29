@@ -10,6 +10,7 @@ static SDL_Texture *positionTexture = NULL, *buttonTexture;
 static char *positionString, mouseButton = false, lineType = 0, lineStatus = 0;
 static char *filename;
 static line1 *line;
+static _Bool tryToSnap = true;
 
 void redo(void) {
 	if(drawableLines != lines) drawableLines++;
@@ -57,7 +58,7 @@ void allocNewLine(Uint32 type, double posX, double posY, int drawType) {
 	line[lines-1].lenght = 1;
 	line[lines-1].type = type;
 	if(!drawType) {
-		snapIfPossible(posX, posY, cuts, line, lines, snap, grid);
+		if(tryToSnap) snapIfPossible(posX, posY, cuts, line, lines, snap, grid, 1);
 		line[lines-1].lenght++;
 	}
 
@@ -293,7 +294,7 @@ int loadEditorFile(char *filename, int level) {
 
 void drawPosition(void) {
 	if(positionTexture != NULL) SDL_DestroyTexture(positionTexture);
-	sprintf(positionString, "%sx=%.2f y=%.2f, %s%.2f*10^%d", textLine[11], x, y, textLine[12], zoom/powf(10.0, floor(log10(zoom))), floor(log10(zoom)));
+	sprintf(positionString, "%sx=%.2f y=%.2f, %s%.2f*10^%.0fm", textLine[11], x, y, textLine[12], zoom/powf(10.0, floor(log10(zoom))), floor(log10(zoom)));
 	positionSurface = TTF_RenderUTF8_Blended(detailFont, positionString, translate_color(TITLE_FONT_COLOR));
 	positionTexture = SDL_CreateTextureFromSurface(render, positionSurface);
 	SDL_FreeSurface(positionSurface);
@@ -551,9 +552,14 @@ int editorInput(void) {
 						} 
 						lastX = mouseCorX;
 						lastY = mouseCorY;
-					} else if(!mouseButton&&lineStatus==1)
-						snapIfPossible((mouseCorX - screenSize[0]/2 - x/zoom)*zoom, (mouseCorY - screenSize[1]/2 - y/zoom)*zoom, cuts, line, lines, snap, grid);
-					else if(mouseButton&&lineStatus==2)
+					} else if(!mouseButton&&lineStatus==1) {
+						if(tryToSnap)
+							snapIfPossible((mouseCorX - screenSize[0]/2 - x/zoom)*zoom, (mouseCorY - screenSize[1]/2 - y/zoom)*zoom, cuts, line, lines, snap, grid, 1);
+						else {
+							line[lines-1].x[line[lines-1].lenght-1] = (mouseCorX - screenSize[0]/2 - x/zoom)*zoom;
+							line[lines-1].y[line[lines-1].lenght-1] = (mouseCorY - screenSize[1]/2 - y/zoom)*zoom;
+						}
+					} else if(mouseButton&&lineStatus==2)
 						addPointToNewDraw((mouseCorX - screenSize[0]/2 - x/zoom)*zoom, (mouseCorY - screenSize[1]/2 - y/zoom)*zoom);
 					else if(mouseButton&&lineType==127)
 						deleteLine((mouseCorX - screenSize[0]/2 - x/zoom)*zoom, (mouseCorY - screenSize[1]/2 - y/zoom)*zoom);
@@ -566,6 +572,10 @@ int editorInput(void) {
 					SDL_GetMouseState(&mouseCorX, &mouseCorY);
 					SDL_GetWindowSize(win, &screenSize[0], &screenSize[1]);
 
+					if(event.button.button == SDL_BUTTON_MIDDLE) {
+						tryToSnap=false;
+						break;
+					}
 
 					// Line type selection
 					if(event.button.button == SDL_BUTTON_RIGHT){
@@ -632,10 +642,13 @@ int editorInput(void) {
 				}
 			case SDL_MOUSEBUTTONUP:
 				{
-					mouseButton = false;
-					lastX = 0;
-					lastY = 0;
-					if(lineStatus==2) finishNewDraw();
+					if(event.button.button == SDL_BUTTON_MIDDLE) tryToSnap=true;
+					else {
+					    mouseButton = false;
+					    lastX = 0;
+					    lastY = 0;
+					    if(lineStatus==2) finishNewDraw();
+					}
 					break;
 				}
 			case SDL_MOUSEWHEEL:
@@ -771,8 +784,9 @@ void drawEditor() {
         int mousePos[2];
         SDL_GetMouseState(&mousePos[0], &mousePos[1]);
 
-		if(isSnappable((mousePos[0]-screenSize[0]/2-x/zoom)*zoom, (mousePos[1]-screenSize[1]/2-y/zoom)*zoom, \
-					   cuts, line, lines, snap, grid)) {
+		if(tryToSnap&&lineType) {
+		if(snapIfPossible((mousePos[0]-screenSize[0]/2-x/zoom)*zoom, (mousePos[1]-screenSize[1]/2-y/zoom)*zoom, \
+					   cuts, line, lines, snap, grid, 0)) {
 
 		    rect.x = mousePos[0] - 5;
 	        rect.y = mousePos[1] - 5;
@@ -780,7 +794,7 @@ void drawEditor() {
 	        rect.h = 10;
 	        SDL_SetRenderDrawColor(render, r32(TITLE_FONT_COLOR), g32(TITLE_FONT_COLOR), b32(TITLE_FONT_COLOR), a32(TITLE_FONT_COLOR));
 	        SDL_RenderFillRect(render, &rect);
-		}
+		}}
 
 	// update frame
 	SDL_RenderPresent(render);
