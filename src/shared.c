@@ -27,7 +27,7 @@ double distance2d(double deltaX, double deltaY) {
 
 float infinity(void) {
 	int inf = 0x7F800000;
-    return *(float*)&inf;
+	return *(float*)&inf;
 }
 
 double cmod(double a, double b) {
