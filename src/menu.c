@@ -4,6 +4,10 @@ SDL_Surface *editorButton, *aboutButton, *tutorialButton, *exitButton, *loadButt
 SDL_Surface *title, *information;
 
 int initMenu() {
+	char *line = realloc(textLine[6], (strlen(textLine[6])+strlen(VERSION)+1)*sizeof(char));
+	textLine[6] = line;
+	strcat(textLine[6], VERSION);
+
 	title = TTF_RenderUTF8_Blended(titleFont, textLine[1], translate_color(TITLE_FONT_COLOR));
 	information = TTF_RenderUTF8_Blended(detailFont, textLine[6], translate_color(DETAIL_FONT_COLOR));
 	editorButton = TTF_RenderUTF8_Blended(menuFont, textLine[2], translate_color(MENU_FONT_COLOR));

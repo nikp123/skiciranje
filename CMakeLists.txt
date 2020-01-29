@@ -2,6 +2,14 @@ cmake_minimum_required(VERSION 3.0)
 project(skiciranje)
 
 set(CMAKE_BUILD_TYPE Debug)
+set(skiciranje_VERSION_MAJOR 0)
+set(skiciranje_VERSION_MINOR 1)
+set(skiciranje_VERSION_PATCH 0)
+set(skiciranje_VERSION_TWEAK 0)
+
+set(skiciranje_VERSION "${skiciranje_VERSION_MAJOR}.${skiciranje_VERSION_MINOR}.${skiciranje_VERSION_PATCH}.${skiciranje_VERSION_TWEAK}")
+
+add_definitions(-DPACKAGE="skiciranje" -DVERSION="${skiciranje_VERSION}")
 
 # Include SDL2 and other external libraries
 find_package(PkgConfig REQUIRED)
