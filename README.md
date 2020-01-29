@@ -38,4 +38,5 @@ Further info can be found in the `doc` folder.
 ```
 
 This repository also contains [tinyfiledialogs](lib/tinyfiledialogs/tinyfiledialogs.h) which is zlib.
+As well as [fantasque-sans](https://github.com/belluzj/fantasque-sans/blob/master/LICENSE.txt)
 
